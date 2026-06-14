@@ -1,76 +1,57 @@
+<script setup lang="ts">
+const { loading, error, fetchRobotsTxt } = useRobotsFetch()
+const { analysis, analyzing, runAnalysis, debouncedAnalyze } = useRobotsAnalysis()
+
+const hasResults = computed(() => analysis.value !== null)
+
+async function onAnalyzeUrl(url: string) {
+  const result = await fetchRobotsTxt(url)
+  if (result) {
+    runAnalysis(result.text)
+  }
+}
+
+function onAnalyzeText(text: string) {
+  debouncedAnalyze(text)
+}
+
+useSeoMeta({
+  title: 'Robots.txt Optimizer',
+  description: 'Validate, analyze, and optimize your robots.txt file. Check allow/block rules per user-agent and get improvement suggestions.',
+  ogTitle: 'Robots.txt Optimizer',
+  ogDescription: 'Validate, analyze, and optimize your robots.txt file.'
+})
+</script>
+
 <template>
-  <div>
-    <UPageHero
-      title="Nuxt Starter Template"
-      description="A production-ready starter template powered by Nuxt UI. Build beautiful, accessible, and performant applications in minutes, not hours."
-      :links="[{
-        label: 'Get started',
-        to: 'https://ui.nuxt.com/docs/getting-started/installation/nuxt',
-        target: '_blank',
-        trailingIcon: 'i-lucide-arrow-right',
-        size: 'xl'
-      }, {
-        label: 'Use this template',
-        to: 'https://github.com/nuxt-ui-templates/starter',
-        target: '_blank',
-        icon: 'i-simple-icons-github',
-        size: 'xl',
-        color: 'neutral',
-        variant: 'subtle'
-      }]"
+  <div class="max-w-5xl mx-auto px-4 py-8 space-y-8">
+    <div class="space-y-2 text-center">
+      <h1 class="text-3xl font-bold tracking-tight">
+        Robots.txt Optimizer
+      </h1>
+      <p class="text-muted max-w-2xl mx-auto">
+        Validate syntax, summarize allow/block rules per user-agent, simulate common paths, and get suggestions to simplify your robots.txt.
+      </p>
+    </div>
+
+    <RobotsInput
+      :loading="loading || analyzing"
+      :fetch-error="error?.message ?? null"
+      @analyze-url="onAnalyzeUrl"
+      @analyze-text="onAnalyzeText"
     />
 
-    <UPageSection
-      id="features"
-      title="Everything you need to build modern Nuxt apps"
-      description="Start with a solid foundation. This template includes all the essentials for building production-ready applications with Nuxt UI's powerful component system."
-      :features="[{
-        icon: 'i-lucide-rocket',
-        title: 'Production-ready from day one',
-        description: 'Pre-configured with TypeScript, ESLint, Tailwind CSS, and all the best practices. Focus on building features, not setting up tooling.'
-      }, {
-        icon: 'i-lucide-palette',
-        title: 'Beautiful by default',
-        description: 'Leveraging Nuxt UI\'s design system with automatic dark mode, consistent spacing, and polished components that look great out of the box.'
-      }, {
-        icon: 'i-lucide-zap',
-        title: 'Lightning fast',
-        description: 'Optimized for performance with SSR/SSG support, automatic code splitting, and edge-ready deployment. Your users will love the speed.'
-      }, {
-        icon: 'i-lucide-blocks',
-        title: '100+ components included',
-        description: 'Access Nuxt UI\'s comprehensive component library. From forms to navigation, everything is accessible, responsive, and customizable.'
-      }, {
-        icon: 'i-lucide-code-2',
-        title: 'Developer experience first',
-        description: 'Auto-imports, hot module replacement, and TypeScript support. Write less boilerplate and ship more features.'
-      }, {
-        icon: 'i-lucide-shield-check',
-        title: 'Built for scale',
-        description: 'Enterprise-ready architecture with proper error handling, SEO optimization, and security best practices built-in.'
-      }]"
-    />
+    <template v-if="hasResults && analysis">
+      <RobotsValidationReport :validation="analysis.validation" />
 
-    <UPageSection>
-      <UPageCTA
-        title="Ready to build your next Nuxt app?"
-        description="Join thousands of developers building with Nuxt and Nuxt UI. Get this template and start shipping today."
-        variant="subtle"
-        :links="[{
-          label: 'Start building',
-          to: 'https://ui.nuxt.com/docs/getting-started/installation/nuxt',
-          target: '_blank',
-          trailingIcon: 'i-lucide-arrow-right',
-          color: 'neutral'
-        }, {
-          label: 'View on GitHub',
-          to: 'https://github.com/nuxt-ui-templates/starter',
-          target: '_blank',
-          icon: 'i-simple-icons-github',
-          color: 'neutral',
-          variant: 'outline'
-        }]"
+      <RobotsDirectiveSummary :rows="analysis.directiveSummary" />
+
+      <RobotsPathSimulation :verdicts="analysis.pathSimulation" />
+
+      <RobotsOptimizationList
+        :suggestions="analysis.suggestions"
+        :optimized-text="analysis.optimizedText"
       />
-    </UPageSection>
+    </template>
   </div>
 </template>
