@@ -63,11 +63,11 @@ function validateFetchResult(result: FetchResult): FetchResult | null {
   return result
 }
 
-// async function fetchFromServer(url: string): Promise<FetchResult> {
-//   return await $fetch<FetchResult>('/api/robots/fetch', {
-//     query: { url }
-//   })
-// }
+async function fetchFromServer(url: string): Promise<FetchResult> {
+  return await $fetch<FetchResult>('/api/robots/fetch', {
+    query: { url }
+  })
+}
 
 export function useRobotsFetch() {
   const loading = ref(false)
@@ -98,23 +98,23 @@ export function useRobotsFetch() {
         return null
       }
 
-      // try {
-      //   const result = await fetchFromServer(input)
-      //   const validated = validateFetchResult(result)
-      //   if (!validated && result.status !== 404) {
-      //     error.value = {
-      //       message: `Failed to fetch robots.txt (HTTP ${result.status})`,
-      //       source: 'server'
-      //     }
-      //   }
-      //   return validated
-      // } catch (serverErr) {
-      //   error.value = {
-      //     message: serverErr instanceof Error ? serverErr.message : 'Failed to fetch robots.txt via server proxy',
-      //     source: 'server'
-      //   }
-      // }
-      return null
+      try {
+        const result = await fetchFromServer(input)
+        const validated = validateFetchResult(result)
+        if (!validated && result.status !== 404) {
+          error.value = {
+            message: `Failed to fetch robots.txt (HTTP ${result.status})`,
+            source: 'server'
+          }
+        }
+        return validated
+      } catch (serverErr) {
+        error.value = {
+          message: serverErr instanceof Error ? serverErr.message : 'Failed to fetch robots.txt via server proxy',
+          source: 'server'
+        }
+        return null
+      }
     } finally {
       loading.value = false
     }

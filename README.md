@@ -1,64 +1,48 @@
-# Nuxt Starter Template
+# Robots.txt Optimizer
 
-[![Nuxt UI](https://img.shields.io/badge/Made%20with-Nuxt%20UI-00DC82?logo=nuxt&labelColor=020420)](https://ui.nuxt.com)
+Validate, analyze, and optimize `robots.txt` files. Paste content directly or fetch from a URL, then review syntax issues, per–user-agent rules, path simulation, and actionable cleanup suggestions.
 
-Use this template to get started with [Nuxt UI](https://ui.nuxt.com) quickly.
+Built with [Nuxt](https://nuxt.com) and [Nuxt UI](https://ui.nuxt.com).
 
-- [Live demo](https://starter-template.nuxt.dev/)
-- [Documentation](https://ui.nuxt.com/docs/getting-started/installation/nuxt)
+## Features
 
-<a href="https://starter-template.nuxt.dev/" target="_blank">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png">
-    <img alt="Nuxt Starter Template" src="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png" width="830" height="466">
-  </picture>
-</a>
+- **Fetch or paste** — Load `robots.txt` from a domain (with server-side fallback when CORS blocks the browser) or paste content manually
+- **Shareable URLs** — Analyze a site via `/?url=example.com`
+- **Validation** — Syntax and spec checks using [robots-linter](https://www.npmjs.com/package/robots-linter) and [@trybyte/robotstxt-parser](https://www.npmjs.com/package/@trybyte/robotstxt-parser)
+- **Directive summary** — Allow, disallow, and other rules grouped by user-agent
+- **Path simulation** — See how common crawlers (Googlebot, Bingbot, GPTBot, `*`) would treat typical paths
+- **Optimization** — Detect duplicate rules, dead rules, redundant catch-alls, empty groups, and missing user-agents; preview a cleaned-up file
 
-> The starter template for Vue is on https://github.com/nuxt-ui-templates/starter-vue.
-
-## Quick Start
-
-```bash [Terminal]
-npm create nuxt@latest -- -t ui
-```
-
-## Deploy your own
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-name=starter&repository-url=https%3A%2F%2Fgithub.com%2Fnuxt-ui-templates%2Fstarter&demo-image=https%3A%2F%2Fui.nuxt.com%2Fassets%2Ftemplates%2Fnuxt%2Fstarter-dark.png&demo-url=https%3A%2F%2Fstarter-template.nuxt.dev%2F&demo-title=Nuxt%20Starter%20Template&demo-description=A%20minimal%20template%20to%20get%20started%20with%20Nuxt%20UI.)
-
-## Setup
-
-Make sure to install the dependencies:
+## Quick start
 
 ```bash
 pnpm install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
 pnpm dev
 ```
 
-## Production
+Open [http://localhost:3000](http://localhost:3000).
 
-Build the application for production:
+## Scripts
 
-```bash
-pnpm build
+| Command | Description |
+| --- | --- |
+| `pnpm dev` | Start the development server |
+| `pnpm build` | Build for production |
+| `pnpm preview` | Preview the production build |
+| `pnpm test` | Run unit tests (Vitest) |
+| `pnpm lint` | Run ESLint |
+| `pnpm typecheck` | Run TypeScript checks |
+
+## Project structure
+
+```
+app/                    # UI (pages, components, composables)
+server/api/robots/      # Server-side fetch endpoint (CORS fallback)
+shared/robots/          # Core analysis engine (parse, validate, simulate, optimize)
 ```
 
-Locally preview production build:
+The analysis logic in `shared/robots/` is framework-agnostic and covered by unit tests.
 
-```bash
-pnpm preview
-```
+## License
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
-
-## Renovate integration
-
-Install [Renovate GitHub app](https://github.com/apps/renovate/installations/select_target) on your repository and you are good to go.
+MIT
