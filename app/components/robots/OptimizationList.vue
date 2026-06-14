@@ -11,7 +11,8 @@ const typeLabels: Record<OptimizationSuggestion['type'], string> = {
   duplicate_group: 'Duplicate group',
   dead_rule: 'Dead rule',
   redundant_catchall: 'Redundant catch-all',
-  empty_group: 'Empty group'
+  empty_group: 'Empty group',
+  missing_user_agent: 'Missing user-agent'
 }
 
 const toast = useToast()

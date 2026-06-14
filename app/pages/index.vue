@@ -1,19 +1,65 @@
 <script setup lang="ts">
+const route = useRoute()
+const router = useRouter()
 const { loading, error, fetchRobotsTxt } = useRobotsFetch()
 const { analysis, analyzing, runAnalysis, debouncedAnalyze } = useRobotsAnalysis()
 
 const hasResults = computed(() => analysis.value !== null)
 
-async function onAnalyzeUrl(url: string) {
+const loadedUrl = ref<string | null>(null)
+const loadedText = ref<string | null>(null)
+
+const urlFromQuery = computed(() => {
+  const queryUrl = route.query.url
+  return typeof queryUrl === 'string' ? queryUrl : ''
+})
+
+async function analyzeUrl(url: string, updateQuery = true) {
+  if (updateQuery) {
+    await router.replace({ query: { url } })
+  }
+
   const result = await fetchRobotsTxt(url)
   if (result) {
+    loadedUrl.value = result.finalUrl
+    loadedText.value = result.text
     runAnalysis(result.text)
+  } else {
+    loadedUrl.value = null
+    loadedText.value = null
+    runAnalysis('')
   }
 }
 
+async function onAnalyzeUrl(url: string) {
+  await analyzeUrl(url)
+}
+
 function onAnalyzeText(text: string) {
+  if (text.trim()) {
+    router.replace({ query: {} })
+    loadedUrl.value = null
+    loadedText.value = null
+  }
   debouncedAnalyze(text)
 }
+
+function onUpdateLoadedText(text: string) {
+  loadedText.value = text
+  debouncedAnalyze(text)
+}
+
+onMounted(() => {
+  if (urlFromQuery.value) {
+    analyzeUrl(urlFromQuery.value, false)
+  }
+})
+
+watch(urlFromQuery, (url, previous) => {
+  if (url && url !== previous) {
+    analyzeUrl(url, false)
+  }
+})
 
 useSeoMeta({
   title: 'Robots.txt Optimizer',
@@ -37,8 +83,12 @@ useSeoMeta({
     <RobotsInput
       :loading="loading || analyzing"
       :fetch-error="error?.message ?? null"
+      :initial-url="urlFromQuery"
+      :loaded-url="loadedUrl"
+      :loaded-text="loadedText"
       @analyze-url="onAnalyzeUrl"
       @analyze-text="onAnalyzeText"
+      @update-loaded-text="onUpdateLoadedText"
     />
 
     <template v-if="hasResults && analysis">

@@ -24,24 +24,50 @@ function normalizeClientUrl(input: string): string {
   return `https://${trimmed}/robots.txt`
 }
 
+function isTextResponse(contentType: string | null): boolean {
+  if (!contentType) {
+    return true
+  }
+  const type = contentType.split(';')[0]?.trim().toLowerCase() ?? ''
+  return type === 'text/plain' || type.startsWith('text/')
+}
+
+function isSuccessfulRobotsFetch(status: number, contentType: string | null): boolean {
+  return status >= 200 && status < 300 && isTextResponse(contentType)
+}
+
 async function fetchFromClient(url: string): Promise<FetchResult> {
   const response = await fetch(url, {
     headers: { Accept: 'text/plain,*/*' }
   })
+  const contentType = response.headers.get('content-type')
   const text = await response.text()
   return {
     text,
     finalUrl: response.url,
     status: response.status,
+    contentType,
     source: 'client'
   }
 }
 
-async function fetchFromServer(url: string): Promise<FetchResult> {
-  return await $fetch<FetchResult>('/api/robots/fetch', {
-    query: { url }
-  })
+function validateFetchResult(result: FetchResult): FetchResult | null {
+  if (result.status === 404) {
+    return null
+  }
+
+  if (!isSuccessfulRobotsFetch(result.status, result.contentType)) {
+    return null
+  }
+
+  return result
 }
+
+// async function fetchFromServer(url: string): Promise<FetchResult> {
+//   return await $fetch<FetchResult>('/api/robots/fetch', {
+//     query: { url }
+//   })
+// }
 
 export function useRobotsFetch() {
   const loading = ref(false)
@@ -55,7 +81,14 @@ export function useRobotsFetch() {
 
     try {
       const result = await fetchFromClient(url)
-      return result
+      const validated = validateFetchResult(result)
+      if (!validated && result.status !== 404) {
+        error.value = {
+          message: `Failed to fetch robots.txt (HTTP ${result.status})`,
+          source: 'client'
+        }
+      }
+      return validated
     } catch (clientErr) {
       if (!isCorsOrNetworkError(clientErr)) {
         error.value = {
@@ -65,15 +98,23 @@ export function useRobotsFetch() {
         return null
       }
 
-      try {
-        return await fetchFromServer(input)
-      } catch (serverErr) {
-        error.value = {
-          message: serverErr instanceof Error ? serverErr.message : 'Failed to fetch robots.txt via server proxy',
-          source: 'server'
-        }
-        return null
-      }
+      // try {
+      //   const result = await fetchFromServer(input)
+      //   const validated = validateFetchResult(result)
+      //   if (!validated && result.status !== 404) {
+      //     error.value = {
+      //       message: `Failed to fetch robots.txt (HTTP ${result.status})`,
+      //       source: 'server'
+      //     }
+      //   }
+      //   return validated
+      // } catch (serverErr) {
+      //   error.value = {
+      //     message: serverErr instanceof Error ? serverErr.message : 'Failed to fetch robots.txt via server proxy',
+      //     source: 'server'
+      //   }
+      // }
+      return null
     } finally {
       loading.value = false
     }

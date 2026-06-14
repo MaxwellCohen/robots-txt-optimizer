@@ -76,7 +76,7 @@ function collectSemanticIssues(doc: RobotsDocument): ValidationIssue[] {
   for (let gi = 0; gi < doc.groups.length; gi++) {
     const group = doc.groups[gi]!
 
-    if (group.userAgents.length === 0) {
+    if (group.userAgents.length === 0 && group.directives.length > 0) {
       issues.push({
         severity: 'warning',
         message: 'Group has directives but no User-agent',

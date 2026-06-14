@@ -7,7 +7,7 @@ import type {
 import { DEFAULT_PATHS, DEFAULT_USER_AGENTS, SIMULATION_ORIGIN } from './paths'
 
 export function summarizeDirectives(doc: RobotsDocument): DirectiveSummaryRow[] {
-  return doc.groups.map((group, groupIndex) => {
+  return doc.groups.flatMap((group, groupIndex) => {
     const allow: string[] = []
     const disallow: string[] = []
     const other: DirectiveSummaryRow['other'] = []
@@ -26,14 +26,22 @@ export function summarizeDirectives(doc: RobotsDocument): DirectiveSummaryRow[] 
       }
     }
 
-    return {
+    const row = {
       groupIndex,
-      userAgents: [...group.userAgents],
       allow,
       disallow,
       other,
       startLine: group.startLine
     }
+
+    if (group.userAgents.length === 0) {
+      return [{ ...row, userAgents: [] }]
+    }
+
+    return group.userAgents.map(agent => ({
+      ...row,
+      userAgents: [agent]
+    }))
   })
 }
 

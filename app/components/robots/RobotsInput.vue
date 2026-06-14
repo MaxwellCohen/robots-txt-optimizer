@@ -2,16 +2,42 @@
 const emit = defineEmits<{
   analyzeUrl: [url: string]
   analyzeText: [text: string]
+  updateLoadedText: [text: string]
 }>()
 
 const props = defineProps<{
   loading?: boolean
   fetchError?: string | null
+  initialUrl?: string
+  loadedUrl?: string | null
+  loadedText?: string | null
 }>()
 
 const tab = ref('url')
-const url = ref('')
+const url = ref(props.initialUrl ?? '')
 const pastedText = ref('')
+const previewText = ref('')
+
+watch(() => props.loadedText, (value) => {
+  previewText.value = value ?? ''
+})
+
+watch(previewText, (value) => {
+  if (props.loadedText === null) {
+    return
+  }
+  if (value === props.loadedText) {
+    return
+  }
+  emit('updateLoadedText', value)
+})
+
+watch(() => props.initialUrl, (value) => {
+  if (value) {
+    url.value = value
+    tab.value = 'url'
+  }
+})
 
 function submitUrl() {
   if (url.value.trim()) {
@@ -58,6 +84,28 @@ watch(pastedText, (value) => {
                 Analyze
               </UButton>
             </div>
+          </UFormField>
+          <p
+            v-if="props.loadedUrl"
+            class="text-sm text-muted"
+          >
+            Loaded
+            <a
+              :href="props.loadedUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-primary hover:underline"
+            >{{ props.loadedUrl }}</a>
+          </p>
+          <UFormField
+            v-if="props.loadedUrl"
+            label="robots.txt preview"
+          >
+            <UTextarea
+              v-model="previewText"
+              :rows="12"
+              class="font-mono text-sm w-full"
+            />
           </UFormField>
           <UAlert
             v-if="props.fetchError"

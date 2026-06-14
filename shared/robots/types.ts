@@ -64,12 +64,14 @@ export type SuggestionType
     | 'dead_rule'
     | 'redundant_catchall'
     | 'empty_group'
+    | 'missing_user_agent'
 
 export interface OptimizationSuggestion {
   type: SuggestionType
   message: string
   lines: number[]
   groupIndex?: number
+  userAgents?: string[]
 }
 
 export interface RobotsAnalysis {
@@ -85,6 +87,7 @@ export interface FetchResult {
   text: string
   finalUrl: string
   status: number
+  contentType: string | null
   source: 'client' | 'server'
 }
 

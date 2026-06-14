@@ -15,6 +15,7 @@ export default defineEventHandler(async (event) => {
     text: result.text,
     finalUrl: result.finalUrl,
     status: result.status,
+    contentType: result.contentType,
     source: 'server' as const
   }
 })

@@ -91,7 +91,7 @@ export async function assertPublicHost(url: URL): Promise<void> {
   }
 }
 
-export async function fetchRobotsFromUrl(url: URL): Promise<{ text: string, finalUrl: string, status: number }> {
+export async function fetchRobotsFromUrl(url: URL): Promise<{ text: string, finalUrl: string, status: number, contentType: string | null }> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
@@ -120,7 +120,8 @@ export async function fetchRobotsFromUrl(url: URL): Promise<{ text: string, fina
     return {
       text,
       finalUrl: response.url,
-      status: response.status
+      status: response.status,
+      contentType: response.headers.get('content-type')
     }
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
