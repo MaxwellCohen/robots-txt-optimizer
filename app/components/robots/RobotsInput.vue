@@ -117,10 +117,9 @@ watch(pastedText, (value) => {
             v-if="props.loadedUrl"
             label="robots.txt preview"
           >
-            <UTextarea
+            <RobotsLineNumberTextarea
               v-model="previewText"
               :rows="12"
-              class="font-mono text-sm w-full"
             />
           </UFormField>
           <UAlert
@@ -158,12 +157,11 @@ watch(pastedText, (value) => {
           class="space-y-2 pt-2"
         >
           <UFormField label="robots.txt content">
-            <UTextarea
+            <RobotsLineNumberTextarea
               v-model="pastedText"
               :rows="12"
               placeholder="User-agent: *
 Disallow: /private/"
-              class="font-mono text-sm w-full"
             />
           </UFormField>
         </div>

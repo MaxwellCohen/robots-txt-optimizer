@@ -47,120 +47,138 @@ const tableData = computed(() =>
 
 <template>
   <UCard>
-    <template #header>
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-2">
-          <UIcon
-            name="i-lucide-list"
-            class="size-5"
-          />
-          <h2 class="font-semibold">
-            Directive summary
-          </h2>
-        </div>
-        <UButton
-          v-if="rows.length > 0"
-          icon="i-lucide-copy"
-          variant="outline"
-          size="sm"
-          @click="copyMarkdown"
-        >
-          Copy as Markdown
-        </UButton>
-      </div>
-    </template>
-
-    <UTable
-      v-if="tableData.length > 0"
-      :data="tableData"
-      :columns="columns"
+    <UCollapsible
+      :default-open="true"
+      :unmount-on-hide="false"
     >
-      <template #userAgents-cell="{ row }">
-        <ul
-          v-if="row.original.userAgents.length > 0"
-          class="space-y-1"
+      <template #default="{ open }">
+        <div
+          class="flex w-full cursor-pointer items-center justify-between gap-4"
+          role="button"
+          tabindex="0"
         >
-          <li
-            v-for="(agent, index) in row.original.userAgents"
-            :key="index"
-            class="font-mono text-xs"
+          <div class="flex items-center gap-2">
+            <UIcon
+              name="i-lucide-list"
+              class="size-5"
+            />
+            <h2 class="font-semibold">
+              Directive summary
+            </h2>
+            <UIcon
+              name="i-lucide-chevron-down"
+              class="size-4 text-muted transition-transform duration-200"
+              :class="{ 'rotate-180': open }"
+            />
+          </div>
+          <UButton
+            v-if="rows.length > 0"
+            icon="i-lucide-copy"
+            variant="outline"
+            size="sm"
+            @click.stop="copyMarkdown"
           >
-            {{ agent }}
-          </li>
-        </ul>
-        <span
-          v-else
-          class="text-muted"
-        >—</span>
+            Copy as Markdown
+          </UButton>
+        </div>
       </template>
 
-      <template #allow-cell="{ row }">
-        <ul
-          v-if="row.original.allow.length > 0"
-          class="space-y-3"
-        >
-          <li
-            v-for="(pattern, index) in row.original.allow"
-            :key="index"
+      <template #content>
+        <div class="mt-4 border-t border-default pt-4">
+          <UTable
+            v-if="tableData.length > 0"
+            :data="tableData"
+            :columns="columns"
           >
-            <span class="font-mono text-xs">{{ pattern }}</span>
-            <span class="block text-xs text-muted mt-0.5">
-              {{ explainPattern(pattern, 'allow') }}
-            </span>
-          </li>
-        </ul>
-        <span
-          v-else
-          class="text-muted"
-        >—</span>
-      </template>
+            <template #userAgents-cell="{ row }">
+              <ul
+                v-if="row.original.userAgents.length > 0"
+                class="space-y-1"
+              >
+                <li
+                  v-for="(agent, index) in row.original.userAgents"
+                  :key="index"
+                  class="font-mono text-xs"
+                >
+                  {{ agent }}
+                </li>
+              </ul>
+              <span
+                v-else
+                class="text-muted"
+              >—</span>
+            </template>
 
-      <template #disallow-cell="{ row }">
-        <ul
-          v-if="row.original.disallow.length > 0"
-          class="space-y-3"
-        >
-          <li
-            v-for="(pattern, index) in row.original.disallow"
-            :key="index"
-          >
-            <span class="font-mono text-xs">{{ pattern }}</span>
-            <span class="block text-xs text-muted mt-0.5">
-              {{ explainPattern(pattern, 'disallow', { allowPatterns: row.original.allow }) }}
-            </span>
-          </li>
-        </ul>
-        <span
-          v-else
-          class="text-muted"
-        >—</span>
-      </template>
+            <template #allow-cell="{ row }">
+              <ul
+                v-if="row.original.allow.length > 0"
+                class="space-y-3"
+              >
+                <li
+                  v-for="(pattern, index) in row.original.allow"
+                  :key="index"
+                >
+                  <span class="font-mono text-xs">{{ pattern }}</span>
+                  <span class="block text-xs text-muted mt-0.5">
+                    {{ explainPattern(pattern, 'allow') }}
+                  </span>
+                </li>
+              </ul>
+              <span
+                v-else
+                class="text-muted"
+              >—</span>
+            </template>
 
-      <template #other-cell="{ row }">
-        <ul
-          v-if="row.original.other.length > 0"
-          class="space-y-3"
-        >
-          <li
-            v-for="(item, index) in row.original.other"
-            :key="index"
-          >
-            <span class="font-mono text-xs">{{ item.name }}: {{ item.value }}</span>
-            <span class="block text-xs text-muted mt-0.5">
-              {{ explainOtherDirective(item.name, item.value) }}
-            </span>
-          </li>
-        </ul>
-        <span
-          v-else
-          class="text-muted"
-        >—</span>
+            <template #disallow-cell="{ row }">
+              <ul
+                v-if="row.original.disallow.length > 0"
+                class="space-y-3"
+              >
+                <li
+                  v-for="(pattern, index) in row.original.disallow"
+                  :key="index"
+                >
+                  <span class="font-mono text-xs">{{ pattern }}</span>
+                  <span class="block text-xs text-muted mt-0.5">
+                    {{ explainPattern(pattern, 'disallow', { allowPatterns: row.original.allow }) }}
+                  </span>
+                </li>
+              </ul>
+              <span
+                v-else
+                class="text-muted"
+              >—</span>
+            </template>
+
+            <template #other-cell="{ row }">
+              <ul
+                v-if="row.original.other.length > 0"
+                class="space-y-3"
+              >
+                <li
+                  v-for="(item, index) in row.original.other"
+                  :key="index"
+                >
+                  <span class="font-mono text-xs">{{ item.name }}: {{ item.value }}</span>
+                  <span class="block text-xs text-muted mt-0.5">
+                    {{ explainOtherDirective(item.name, item.value) }}
+                  </span>
+                </li>
+              </ul>
+              <span
+                v-else
+                class="text-muted"
+              >—</span>
+            </template>
+          </UTable>
+          <UEmpty
+            v-else
+            icon="i-lucide-file-question"
+            title="No user-agent groups found"
+          />
+        </div>
       </template>
-    </UTable>
-    <UEmpty
-      v-else
-      icon="i-lucide-file-question"
-      title="No user-agent groups found"
-    />
+    </UCollapsible>
   </UCard>
 </template>

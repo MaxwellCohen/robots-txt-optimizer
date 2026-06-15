@@ -29,79 +29,120 @@ function copyOptimized() {
 <template>
   <div class="space-y-6">
     <UCard>
-      <template #header>
-        <div class="flex items-center gap-2">
-          <UIcon
-            name="i-lucide-sparkles"
-            class="size-5"
-          />
-          <h2 class="font-semibold">
-            Optimization suggestions
-          </h2>
-        </div>
-      </template>
-
-      <UEmpty
-        v-if="suggestions.length === 0"
-        icon="i-lucide-check-circle"
-        title="No optimizations suggested"
-        description="Your robots.txt looks clean — no duplicate, dead, or redundant rules detected."
-      />
-
-      <ul
-        v-else
-        class="space-y-3"
+      <UCollapsible
+        :default-open="true"
+        :unmount-on-hide="false"
       >
-        <li
-          v-for="(suggestion, index) in suggestions"
-          :key="index"
-          class="rounded-lg border border-default p-4"
-        >
-          <div class="flex items-center gap-2 mb-2">
-            <UBadge
-              color="primary"
-              variant="subtle"
-            >
-              {{ typeLabels[suggestion.type] }}
-            </UBadge>
-            <span
-              v-if="suggestion.lines.length"
-              class="text-xs text-muted"
-            >
-              Line {{ suggestion.lines.join(', ') }}
-            </span>
-          </div>
-          <p class="text-sm">
-            {{ suggestion.message }}
-          </p>
-        </li>
-      </ul>
-    </UCard>
-
-    <UCard v-if="optimizedText && suggestions.length > 0">
-      <template #header>
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex items-center gap-2">
+        <template #default="{ open }">
+          <div
+            class="flex w-full cursor-pointer items-center gap-2"
+            role="button"
+            tabindex="0"
+          >
             <UIcon
-              name="i-lucide-file-code"
+              name="i-lucide-sparkles"
               class="size-5"
             />
             <h2 class="font-semibold">
-              Optimized robots.txt
+              Optimization suggestions
             </h2>
+            <UBadge
+              v-if="suggestions.length > 0"
+              color="primary"
+              variant="subtle"
+            >
+              {{ suggestions.length }}
+            </UBadge>
+            <UIcon
+              name="i-lucide-chevron-down"
+              class="size-4 text-muted transition-transform duration-200"
+              :class="{ 'rotate-180': open }"
+            />
           </div>
-          <UButton
-            icon="i-lucide-copy"
-            variant="outline"
-            size="sm"
-            @click="copyOptimized"
-          >
-            Copy
-          </UButton>
-        </div>
-      </template>
+        </template>
 
-      <pre class="text-sm font-mono overflow-x-auto p-4 rounded-lg bg-elevated">{{ optimizedText }}</pre>
+        <template #content>
+          <div class="mt-4 border-t border-default pt-4">
+            <UEmpty
+              v-if="suggestions.length === 0"
+              icon="i-lucide-check-circle"
+              title="No optimizations suggested"
+              description="Your robots.txt looks clean — no duplicate, dead, or redundant rules detected."
+            />
+
+            <ul
+              v-else
+              class="space-y-3"
+            >
+              <li
+                v-for="(suggestion, index) in suggestions"
+                :key="index"
+                class="rounded-lg border border-default p-4"
+              >
+                <div class="flex items-center gap-2 mb-2">
+                  <UBadge
+                    color="primary"
+                    variant="subtle"
+                  >
+                    {{ typeLabels[suggestion.type] }}
+                  </UBadge>
+                  <span
+                    v-if="suggestion.lines.length"
+                    class="text-xs text-muted"
+                  >
+                    Line {{ suggestion.lines.join(', ') }}
+                  </span>
+                </div>
+                <p class="text-sm">
+                  {{ suggestion.message }}
+                </p>
+              </li>
+            </ul>
+          </div>
+        </template>
+      </UCollapsible>
+    </UCard>
+
+    <UCard v-if="optimizedText && suggestions.length > 0">
+      <UCollapsible
+        :default-open="true"
+        :unmount-on-hide="false"
+      >
+        <template #default="{ open }">
+          <div
+            class="flex w-full cursor-pointer items-center justify-between gap-4"
+            role="button"
+            tabindex="0"
+          >
+            <div class="flex items-center gap-2">
+              <UIcon
+                name="i-lucide-file-code"
+                class="size-5"
+              />
+              <h2 class="font-semibold">
+                Optimized robots.txt
+              </h2>
+              <UIcon
+                name="i-lucide-chevron-down"
+                class="size-4 text-muted transition-transform duration-200"
+                :class="{ 'rotate-180': open }"
+              />
+            </div>
+            <UButton
+              icon="i-lucide-copy"
+              variant="outline"
+              size="sm"
+              @click.stop="copyOptimized"
+            >
+              Copy
+            </UButton>
+          </div>
+        </template>
+
+        <template #content>
+          <pre class="mt-4 border-t border-default pt-4 text-sm font-mono overflow-x-auto p-4 rounded-lg bg-elevated">{{ optimizedText }}</pre>
+        </template>
+      </UCollapsible>
     </UCard>
   </div>
 </template>

@@ -27,33 +27,53 @@ const tableData = computed(() =>
 
 <template>
   <UCard>
-    <template #header>
-      <div class="flex items-center gap-2">
-        <UIcon
-          name="i-lucide-route"
-          class="size-5"
-        />
-        <h2 class="font-semibold">
-          Path simulation
-        </h2>
-      </div>
-      <p class="text-sm text-muted mt-1">
-        Simulated against common paths on example.com
-      </p>
-    </template>
-
-    <UTable
-      :data="tableData"
-      :columns="columns"
+    <UCollapsible
+      :default-open="true"
+      :unmount-on-hide="false"
     >
-      <template #verdict-cell="{ row }">
-        <UBadge
-          :color="row.original.verdictColor"
-          variant="subtle"
+      <template #default="{ open }">
+        <div
+          class="flex w-full cursor-pointer flex-col gap-1"
+          role="button"
+          tabindex="0"
         >
-          {{ row.original.verdict }}
-        </UBadge>
+          <div class="flex items-center gap-2">
+            <UIcon
+              name="i-lucide-route"
+              class="size-5"
+            />
+            <h2 class="font-semibold">
+              Path simulation
+            </h2>
+            <UIcon
+              name="i-lucide-chevron-down"
+              class="size-4 text-muted transition-transform duration-200"
+              :class="{ 'rotate-180': open }"
+            />
+          </div>
+          <p class="text-sm text-muted">
+            Simulated against common paths on example.com
+          </p>
+        </div>
       </template>
-    </UTable>
+
+      <template #content>
+        <div class="mt-4 border-t border-default pt-4">
+          <UTable
+            :data="tableData"
+            :columns="columns"
+          >
+            <template #verdict-cell="{ row }">
+              <UBadge
+                :color="row.original.verdictColor"
+                variant="subtle"
+              >
+                {{ row.original.verdict }}
+              </UBadge>
+            </template>
+          </UTable>
+        </div>
+      </template>
+    </UCollapsible>
   </UCard>
 </template>
