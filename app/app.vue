@@ -18,7 +18,7 @@ useHead({
 
 <template>
   <UApp>
-    <UHeader>
+    <UHeader :toggle="false">
       <template #left>
         <NuxtLink
           to="/"
@@ -36,7 +36,7 @@ useHead({
         <UColorModeButton />
 
         <UButton
-          to="https://github.com/maxcohen/robots-txt-optimizer"
+          to="https://github.com/MaxwellCohen/robots-txt-optimizer"
           target="_blank"
           icon="i-simple-icons-github"
           aria-label="GitHub"
