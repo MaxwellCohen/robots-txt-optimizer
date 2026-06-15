@@ -20,7 +20,25 @@ function issueFromParseError(err: unknown): ValidationIssue | null {
   }
 }
 
-function collectReporterIssues(reporter: RobotsParsingReporter): ValidationIssue[] {
+function directiveNameAtLine(doc: RobotsDocument, lineNum: number): string | undefined {
+  const raw = doc.lines[lineNum - 1]
+  if (raw === undefined) {
+    return undefined
+  }
+  const hashIndex = raw.indexOf('#')
+  const content = (hashIndex === -1 ? raw : raw.slice(0, hashIndex)).trim()
+  const colonIndex = content.indexOf(':')
+  if (colonIndex === -1) {
+    return undefined
+  }
+  const name = content.slice(0, colonIndex).trim()
+  return name || undefined
+}
+
+function collectReporterIssues(
+  reporter: RobotsParsingReporter,
+  doc: RobotsDocument
+): ValidationIssue[] {
   const issues: ValidationIssue[] = []
 
   for (const result of reporter.parseResults()) {
@@ -59,9 +77,11 @@ function collectReporterIssues(reporter: RobotsParsingReporter): ValidationIssue
     }
 
     if (tagName === RobotsTagName.Unused) {
+      const directiveName = directiveNameAtLine(doc, lineNum)
+      const label = directiveName ? `Directive "${directiveName}"` : 'Directive'
       issues.push({
         severity: 'warning',
-        message: 'Directive is recognized but not part of RFC 9309 (may be ignored by crawlers)',
+        message: `${label} is recognized but not part of RFC 9309 (may be ignored by crawlers)`,
         line: lineNum
       })
     }
@@ -175,7 +195,7 @@ export function validateRobotsDocument(doc: RobotsDocument): ValidationResult {
 
   const reporter = new RobotsParsingReporter()
   googleParse(doc.raw, reporter)
-  issues.push(...collectReporterIssues(reporter))
+  issues.push(...collectReporterIssues(reporter, doc))
   issues.push(...collectSemanticIssues(doc))
 
   const deduped = dedupeIssues(issues)

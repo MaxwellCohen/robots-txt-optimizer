@@ -145,6 +145,20 @@ Allow: /blog/post-1`
     expect(dead?.message).toContain('superseded by Allow: /blog/post-1')
   })
 
+  it('names non-RFC directives in validation warnings', () => {
+    const text = `User-agent: *
+Crawl-delay: 10
+Disallow: /private/`
+
+    const result = analyzeRobotsTxt(text)
+
+    expect(result.validation.issues).toContainEqual({
+      severity: 'warning',
+      message: 'Directive "Crawl-delay" is recognized but not part of RFC 9309 (may be ignored by crawlers)',
+      line: 2
+    })
+  })
+
   it('removes redundant disallow rules after allow-list catch-all', () => {
     const text = `User-agent: *
 Allow: /$
