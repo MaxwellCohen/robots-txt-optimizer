@@ -85,6 +85,7 @@ export function useRobotsFetch() {
       if (!validated && result.status !== 404) {
         error.value = {
           message: `Failed to fetch robots.txt (HTTP ${result.status})`,
+          url,
           source: 'client'
         }
       }
@@ -93,6 +94,7 @@ export function useRobotsFetch() {
       if (!isCorsOrNetworkError(clientErr)) {
         error.value = {
           message: clientErr instanceof Error ? clientErr.message : 'Failed to fetch robots.txt',
+          url,
           source: 'client'
         }
         return null
@@ -104,6 +106,7 @@ export function useRobotsFetch() {
         if (!validated && result.status !== 404) {
           error.value = {
             message: `Failed to fetch robots.txt (HTTP ${result.status})`,
+            url,
             source: 'server'
           }
         }
@@ -111,6 +114,7 @@ export function useRobotsFetch() {
       } catch (serverErr) {
         error.value = {
           message: serverErr instanceof Error ? serverErr.message : 'Failed to fetch robots.txt via server proxy',
+          url,
           source: 'server'
         }
         return null

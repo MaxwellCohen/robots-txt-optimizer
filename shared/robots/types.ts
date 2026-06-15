@@ -93,5 +93,6 @@ export interface FetchResult {
 
 export interface FetchError {
   message: string
+  url: string
   source?: 'client' | 'server'
 }

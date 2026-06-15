@@ -3,11 +3,14 @@ const route = useRoute()
 const router = useRouter()
 const { loading, error, fetchRobotsTxt } = useRobotsFetch()
 const { analysis, analyzing, runAnalysis, debouncedAnalyze } = useRobotsAnalysis()
+const { textFromQuery, decodeTextFromQuery, debouncedSyncTextToUrl } = useRobotsTextUrl()
 
 const hasResults = computed(() => analysis.value !== null)
 
 const loadedUrl = ref<string | null>(null)
 const loadedText = ref<string | null>(null)
+const initialPastedText = ref('')
+const inputTab = ref<'url' | 'paste'>('url')
 
 const urlFromQuery = computed(() => {
   const queryUrl = route.query.url
@@ -36,28 +39,52 @@ async function onAnalyzeUrl(url: string) {
 }
 
 function onAnalyzeText(text: string) {
-  if (text.trim()) {
-    router.replace({ query: {} })
-    loadedUrl.value = null
-    loadedText.value = null
-  }
+  loadedUrl.value = null
+  loadedText.value = null
   debouncedAnalyze(text)
+  debouncedSyncTextToUrl(text)
 }
 
 function onUpdateLoadedText(text: string) {
+  loadedUrl.value = null
   loadedText.value = text
   debouncedAnalyze(text)
+  debouncedSyncTextToUrl(text)
 }
 
-onMounted(() => {
+async function loadTextFromQuery(encoded: string) {
+  const text = await decodeTextFromQuery(encoded)
+  if (!text) {
+    return
+  }
+
+  loadedUrl.value = null
+  loadedText.value = null
+  initialPastedText.value = text
+  inputTab.value = 'paste'
+  runAnalysis(text)
+}
+
+onMounted(async () => {
+  if (textFromQuery.value) {
+    await loadTextFromQuery(textFromQuery.value)
+    return
+  }
+
   if (urlFromQuery.value) {
-    analyzeUrl(urlFromQuery.value, false)
+    await analyzeUrl(urlFromQuery.value, false)
   }
 })
 
 watch(urlFromQuery, (url, previous) => {
-  if (url && url !== previous) {
+  if (url && url !== previous && !textFromQuery.value) {
     analyzeUrl(url, false)
+  }
+})
+
+watch(textFromQuery, (encoded, previous) => {
+  if (encoded && encoded !== previous) {
+    loadTextFromQuery(encoded)
   }
 })
 
@@ -82,8 +109,10 @@ useSeoMeta({
 
     <RobotsInput
       :loading="loading || analyzing"
-      :fetch-error="error?.message ?? null"
+      :fetch-error="error"
       :initial-url="urlFromQuery"
+      :initial-tab="inputTab"
+      :initial-pasted-text="initialPastedText"
       :loaded-url="loadedUrl"
       :loaded-text="loadedText"
       @analyze-url="onAnalyzeUrl"

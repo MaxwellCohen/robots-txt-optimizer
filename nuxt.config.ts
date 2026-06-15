@@ -13,6 +13,7 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/': { prerender: true },
+    '/robots.txt': { prerender: true },
     '/api/**': { prerender: false }
   },
 
