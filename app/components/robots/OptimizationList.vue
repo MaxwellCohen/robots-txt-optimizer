@@ -140,7 +140,9 @@ function copyOptimized() {
         </template>
 
         <template #content>
-          <pre class="mt-4 border-t border-default pt-4 text-sm font-mono overflow-x-auto p-4 rounded-lg bg-elevated">{{ optimizedText }}</pre>
+          <div class="border-t border-default pt-4">
+            <RobotsLineNumberPre :text="optimizedText" />
+          </div>
         </template>
       </UCollapsible>
     </UCard>
