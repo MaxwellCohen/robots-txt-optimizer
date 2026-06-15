@@ -1,9 +1,14 @@
 <script setup lang="ts">
+import { defaultSimulationConfig, type SimulationConfig } from '#shared/robots'
+
 const route = useRoute()
 const router = useRouter()
 const { loading, error, fetchRobotsTxt } = useRobotsFetch()
 const { analysis, analyzing, runAnalysis, debouncedAnalyze } = useRobotsAnalysis()
 const { textFromQuery, decodeTextFromQuery, debouncedSyncTextToUrl } = useRobotsTextUrl()
+const { simulationFromQuery, decodeSimulationFromQuery, debouncedSyncSimulationToUrl } = useSimulationUrl()
+
+const simulationConfig = ref<SimulationConfig>(defaultSimulationConfig())
 
 const hasResults = computed(() => analysis.value !== null)
 
@@ -19,7 +24,8 @@ const urlFromQuery = computed(() => {
 
 async function analyzeUrl(url: string, updateQuery = true) {
   if (updateQuery) {
-    await router.replace({ query: { url } })
+    const { r: _, ...rest } = route.query
+    await router.replace({ query: { ...rest, url } })
   }
 
   const result = await fetchRobotsTxt(url)
@@ -65,7 +71,18 @@ async function loadTextFromQuery(encoded: string) {
   runAnalysis(text)
 }
 
+async function loadSimulationFromQuery(encoded: string) {
+  const config = await decodeSimulationFromQuery(encoded)
+  if (config) {
+    simulationConfig.value = config
+  }
+}
+
 onMounted(async () => {
+  if (simulationFromQuery.value) {
+    await loadSimulationFromQuery(simulationFromQuery.value)
+  }
+
   if (textFromQuery.value) {
     await loadTextFromQuery(textFromQuery.value)
     return
@@ -87,6 +104,16 @@ watch(textFromQuery, (encoded, previous) => {
     loadTextFromQuery(encoded)
   }
 })
+
+watch(simulationFromQuery, (encoded, previous) => {
+  if (encoded && encoded !== previous) {
+    loadSimulationFromQuery(encoded)
+  }
+})
+
+watch(simulationConfig, (config) => {
+  debouncedSyncSimulationToUrl(config)
+}, { deep: true })
 
 useSeoMeta({
   title: 'Robots.txt Optimizer',
@@ -125,7 +152,11 @@ useSeoMeta({
 
       <RobotsDirectiveSummary :rows="analysis.directiveSummary" />
 
-      <RobotsPathSimulation :verdicts="analysis.pathSimulation" />
+      <RobotsPathSimulation
+        :document="analysis.document"
+        :config="simulationConfig"
+        @update:config="simulationConfig = $event"
+      />
 
       <RobotsOptimizationList
         :suggestions="analysis.suggestions"

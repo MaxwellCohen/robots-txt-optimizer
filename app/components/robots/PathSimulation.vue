@@ -1,9 +1,49 @@
 <script setup lang="ts">
-import type { PathVerdict } from '#shared/robots/types'
+import {
+  collectUserAgentOptions,
+  normalizeSimulationPath,
+  simulatePaths,
+  SIMULATION_ORIGIN,
+  type RobotsDocument,
+  type SimulationConfig
+} from '#shared/robots'
 
 const props = defineProps<{
-  verdicts: PathVerdict[]
+  document: RobotsDocument
+  config: SimulationConfig
 }>()
+
+const emit = defineEmits<{
+  'update:config': [config: SimulationConfig]
+}>()
+
+const userAgentOptions = computed(() =>
+  collectUserAgentOptions(props.document).map(agent => agent)
+)
+
+const selectedUserAgents = computed({
+  get: () => props.config.userAgents,
+  set: (userAgents: string[]) => {
+    if (userAgents.length === 0) {
+      return
+    }
+    emit('update:config', { ...props.config, userAgents })
+  }
+})
+
+const paths = computed({
+  get: () => props.config.paths,
+  set: (nextPaths: string[]) => {
+    if (nextPaths.length === 0) {
+      return
+    }
+    emit('update:config', { ...props.config, paths: nextPaths })
+  }
+})
+
+const verdicts = computed(() =>
+  simulatePaths(props.document, props.config.userAgents, props.config.paths)
+)
 
 const columns = [
   { accessorKey: 'userAgent', header: 'User-agent' },
@@ -13,7 +53,7 @@ const columns = [
 ]
 
 const tableData = computed(() =>
-  props.verdicts.map(v => ({
+  verdicts.value.map(v => ({
     userAgent: v.userAgent,
     path: v.path,
     verdict: v.allowed ? 'Allowed' : 'Blocked',
@@ -52,14 +92,43 @@ const tableData = computed(() =>
             />
           </div>
           <p class="text-sm text-muted">
-            Simulated against common paths on example.com
+            Test paths against user-agents on {{ SIMULATION_ORIGIN }}
           </p>
         </div>
       </template>
 
       <template #content>
-        <div class="mt-4 border-t border-default pt-4">
+        <div class="mt-4 space-y-4 border-t border-default pt-4">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <UFormField
+              label="User-agents"
+              hint="Select or type custom user-agents"
+            >
+              <USelectMenu
+                v-model="selectedUserAgents"
+                :items="userAgentOptions"
+                multiple
+                create-item
+                placeholder="Select user-agents"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              label="Paths"
+              hint="Type a path and press Enter to add"
+            >
+              <UInputTags
+                v-model="paths"
+                :convert-value="normalizeSimulationPath"
+                placeholder="/your-path"
+                class="w-full font-mono"
+              />
+            </UFormField>
+          </div>
+
           <UTable
+            v-if="tableData.length > 0"
             :data="tableData"
             :columns="columns"
           >

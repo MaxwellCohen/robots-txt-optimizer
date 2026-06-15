@@ -26,8 +26,9 @@ export function useRobotsTextUrl() {
 
   const debouncedSyncTextToUrl = useDebounceFn(async (text: string) => {
     if (!text.trim()) {
-      if (textFromQuery.value || route.query.url) {
-        await router.replace({ query: {} })
+      if (textFromQuery.value) {
+        const { [ROBOTS_TEXT_QUERY_KEY]: _, ...rest } = route.query
+        await router.replace({ query: rest })
       }
       return
     }
@@ -37,7 +38,13 @@ export function useRobotsTextUrl() {
       return
     }
 
-    await router.replace({ query: { [ROBOTS_TEXT_QUERY_KEY]: encoded } })
+    const { url: _, ...rest } = route.query
+    await router.replace({
+      query: {
+        ...rest,
+        [ROBOTS_TEXT_QUERY_KEY]: encoded
+      }
+    })
   }, 500)
 
   return {

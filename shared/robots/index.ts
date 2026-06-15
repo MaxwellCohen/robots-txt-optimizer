@@ -28,5 +28,14 @@ export { validateRobotsDocument } from './validate'
 export { simulatePaths, summarizeDirectives } from './analyze'
 export { suggestOptimizations, buildOptimizedText } from './optimize'
 export { DEFAULT_PATHS, DEFAULT_USER_AGENTS, SIMULATION_ORIGIN } from './paths'
+export {
+  collectUserAgentOptions,
+  decodeSimulationConfig,
+  defaultSimulationConfig,
+  encodeSimulationConfig,
+  isDefaultSimulationConfig,
+  normalizeSimulationPath,
+  type SimulationConfig
+} from './simulation-config'
 export { explainPattern, explainOtherDirective } from './explain-pattern'
 export { formatDirectiveSummaryMarkdown } from './format-markdown'
