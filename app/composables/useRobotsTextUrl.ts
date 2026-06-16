@@ -3,6 +3,11 @@ import { compressTextForUrl, decompressTextFromUrl } from '#shared/robots/url-te
 
 export const ROBOTS_TEXT_QUERY_KEY = 'r'
 
+type ShareContext = {
+  shareUrl?: string | null
+  fetchedText?: string | null
+}
+
 export function useRobotsTextUrl() {
   const route = useRoute()
   const router = useRouter()
@@ -24,7 +29,21 @@ export function useRobotsTextUrl() {
     }
   }
 
-  const debouncedSyncTextToUrl = useDebounceFn(async (text: string) => {
+  const debouncedSyncTextToUrl = useDebounceFn(async (text: string, context?: ShareContext) => {
+    const shareUrl = context?.shareUrl
+    const fetchedText = context?.fetchedText
+
+    // Priority 1: share via loaded URL when text still matches fetched content
+    if (shareUrl && fetchedText != null && text === fetchedText) {
+      const { [ROBOTS_TEXT_QUERY_KEY]: _, ...rest } = route.query
+      if (route.query.url === shareUrl && !textFromQuery.value) {
+        return
+      }
+      await router.replace({ query: { ...rest, url: shareUrl } })
+      return
+    }
+
+    // Priority 2 & 3: pasted text or edited loaded text — share compressed
     if (!text.trim()) {
       if (textFromQuery.value) {
         const { [ROBOTS_TEXT_QUERY_KEY]: _, ...rest } = route.query

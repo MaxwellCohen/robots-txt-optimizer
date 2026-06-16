@@ -13,9 +13,9 @@ const simulationConfig = ref<SimulationConfig>(defaultSimulationConfig())
 const hasResults = computed(() => analysis.value !== null)
 
 const loadedUrl = ref<string | null>(null)
-const loadedText = ref<string | null>(null)
+const fetchedText = ref<string | null>(null)
+const shareUrl = ref<string | null>(null)
 const initialPastedText = ref('')
-const inputTab = ref<'url' | 'paste'>('url')
 
 const urlFromQuery = computed(() => {
   const queryUrl = route.query.url
@@ -31,11 +31,13 @@ async function analyzeUrl(url: string, updateQuery = true) {
   const result = await fetchRobotsTxt(url)
   if (result) {
     loadedUrl.value = result.finalUrl
-    loadedText.value = result.text
+    fetchedText.value = result.text
+    shareUrl.value = url
     runAnalysis(result.text)
   } else {
     loadedUrl.value = null
-    loadedText.value = null
+    fetchedText.value = null
+    shareUrl.value = null
     runAnalysis('')
   }
 }
@@ -45,17 +47,11 @@ async function onAnalyzeUrl(url: string) {
 }
 
 function onAnalyzeText(text: string) {
-  loadedUrl.value = null
-  loadedText.value = null
   debouncedAnalyze(text)
-  debouncedSyncTextToUrl(text)
-}
-
-function onUpdateLoadedText(text: string) {
-  loadedUrl.value = null
-  loadedText.value = text
-  debouncedAnalyze(text)
-  debouncedSyncTextToUrl(text)
+  debouncedSyncTextToUrl(text, {
+    shareUrl: shareUrl.value,
+    fetchedText: fetchedText.value
+  })
 }
 
 async function loadTextFromQuery(encoded: string) {
@@ -65,9 +61,9 @@ async function loadTextFromQuery(encoded: string) {
   }
 
   loadedUrl.value = null
-  loadedText.value = null
+  fetchedText.value = null
+  shareUrl.value = null
   initialPastedText.value = text
-  inputTab.value = 'paste'
   runAnalysis(text)
 }
 
@@ -138,13 +134,11 @@ useSeoMeta({
       :loading="loading || analyzing"
       :fetch-error="error"
       :initial-url="urlFromQuery"
-      :initial-tab="inputTab"
       :initial-pasted-text="initialPastedText"
       :loaded-url="loadedUrl"
-      :loaded-text="loadedText"
+      :loaded-text="fetchedText"
       @analyze-url="onAnalyzeUrl"
       @analyze-text="onAnalyzeText"
-      @update-loaded-text="onUpdateLoadedText"
     />
 
     <template v-if="hasResults && analysis">
