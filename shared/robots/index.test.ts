@@ -64,6 +64,25 @@ Allow: /blog/post-1`
     expect(result.optimizedText).toContain('Disallow: /admin/')
   })
 
+  it('preserves comments in optimized text', () => {
+    const text = `# Site-wide rules
+User-agent: *
+Disallow: /private/  # keep private paths blocked
+Allow: /public/
+
+# Google-specific
+User-agent: Googlebot
+Disallow: /admin/
+Disallow: /admin/  # duplicate`
+
+    const result = analyzeRobotsTxt(text)
+
+    expect(result.optimizedText).toContain('# Site-wide rules')
+    expect(result.optimizedText).toContain('# keep private paths blocked')
+    expect(result.optimizedText).toContain('# Google-specific')
+    expect(result.optimizedText).not.toContain('Disallow: /admin/\nDisallow: /admin/')
+  })
+
   it('suggests User-agent: * when directives lack a user-agent', () => {
     const text = `Disallow: /private/
 Allow: /public/`

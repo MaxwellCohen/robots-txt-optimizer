@@ -5,7 +5,7 @@ import type {
   RobotsDocument,
   UserAgentGroup
 } from './types'
-import { parseRobotsTxt, serializeRobotsDocument } from './parse'
+import { isUserAgentLineContent, parseRobotsTxt } from './parse'
 import { DEFAULT_PATHS, SIMULATION_ORIGIN } from './paths'
 
 function directiveKey(d: Directive): string {
@@ -405,6 +405,117 @@ function mergeDuplicateGroups(doc: RobotsDocument): RobotsDocument {
   return { ...doc, groups: merged }
 }
 
+function getGroupEndLine(doc: RobotsDocument, groupIndex: number): number {
+  const nextGroup = doc.groups[groupIndex + 1]
+  if (nextGroup) {
+    return nextGroup.startLine - 1
+  }
+  if (doc.sitemaps.length > 0) {
+    return doc.sitemaps[0]!.line - 1
+  }
+  return doc.lines.length
+}
+
+function computeRemovedLines(doc: RobotsDocument, optimized: RobotsDocument): Set<number> {
+  const removed = new Set<number>()
+  const keptDirectiveLines = new Set(
+    optimized.groups.flatMap(group => group.directives.map(directive => directive.line))
+  )
+  const keptSitemapLines = new Set(optimized.sitemaps.map(sitemap => sitemap.line))
+  const keptGroupStartLines = new Set(optimized.groups.map(group => group.startLine))
+
+  for (const group of doc.groups) {
+    for (const directive of group.directives) {
+      if (!keptDirectiveLines.has(directive.line)) {
+        removed.add(directive.line)
+      }
+    }
+  }
+
+  for (const sitemap of doc.sitemaps) {
+    if (!keptSitemapLines.has(sitemap.line)) {
+      removed.add(sitemap.line)
+    }
+  }
+
+  for (let groupIndex = 0; groupIndex < doc.groups.length; groupIndex++) {
+    const group = doc.groups[groupIndex]!
+    if (keptGroupStartLines.has(group.startLine)) {
+      continue
+    }
+    for (let line = group.startLine; line <= getGroupEndLine(doc, groupIndex); line++) {
+      removed.add(line)
+    }
+  }
+
+  return removed
+}
+
+function computeInsertions(
+  doc: RobotsDocument,
+  optimized: RobotsDocument
+): Map<number, string[]> {
+  const insertions = new Map<number, string[]>()
+
+  for (const optimizedGroup of optimized.groups) {
+    const originalGroup = doc.groups.find(group => group.startLine === optimizedGroup.startLine)
+    if (!originalGroup) {
+      continue
+    }
+
+    if (originalGroup.userAgents.length === 0 && optimizedGroup.userAgents.length > 0) {
+      insertions.set(
+        optimizedGroup.startLine,
+        optimizedGroup.userAgents.map(agent => `User-agent: ${agent}`)
+      )
+      continue
+    }
+
+    const extraAgents = optimizedGroup.userAgents.filter(
+      agent => !originalGroup.userAgents.includes(agent)
+    )
+    if (extraAgents.length === 0) {
+      continue
+    }
+
+    const groupIndex = doc.groups.indexOf(originalGroup)
+    let lastUserAgentLine = originalGroup.startLine
+    for (let line = originalGroup.startLine; line <= getGroupEndLine(doc, groupIndex); line++) {
+      if (isUserAgentLineContent(doc.lines[line - 1]!)) {
+        lastUserAgentLine = line
+      } else {
+        break
+      }
+    }
+
+    insertions.set(
+      lastUserAgentLine + 1,
+      extraAgents.map(agent => `User-agent: ${agent}`)
+    )
+  }
+
+  return insertions
+}
+
+function formatOptimizedFromOriginal(doc: RobotsDocument, optimized: RobotsDocument): string {
+  const removed = computeRemovedLines(doc, optimized)
+  const insertions = computeInsertions(doc, optimized)
+  const output: string[] = []
+
+  for (let index = 0; index < doc.lines.length; index++) {
+    const lineNum = index + 1
+    const toInsert = insertions.get(lineNum)
+    if (toInsert) {
+      output.push(...toInsert)
+    }
+    if (!removed.has(lineNum)) {
+      output.push(doc.lines[index]!)
+    }
+  }
+
+  return output.join('\n').trimEnd()
+}
+
 export function buildOptimizedText(doc: RobotsDocument, suggestions: OptimizationSuggestion[]): string {
   const linesToRemove = new Set<number>()
 
@@ -431,7 +542,7 @@ export function buildOptimizedText(doc: RobotsDocument, suggestions: Optimizatio
     optimized = mergeDuplicateGroups(optimized)
   }
 
-  return serializeRobotsDocument(optimized)
+  return formatOptimizedFromOriginal(doc, optimized)
 }
 
 export function applyOptimizations(doc: RobotsDocument): RobotsDocument {

@@ -17,12 +17,21 @@ function parseDirectiveName(line: string): { name: string, value: string } | nul
   return { name, value }
 }
 
-function stripComment(line: string): string {
+export function stripComment(line: string): string {
   const hashIndex = line.indexOf('#')
   if (hashIndex === -1) {
     return line.trim()
   }
   return line.slice(0, hashIndex).trim()
+}
+
+export function isUserAgentLineContent(line: string): boolean {
+  const content = stripComment(line)
+  if (!content) {
+    return false
+  }
+  const parsed = parseDirectiveName(content)
+  return parsed !== null && normalizeDirectiveName(parsed.name) === 'useragent'
 }
 
 function normalizeDirectiveName(name: string): string {
