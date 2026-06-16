@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FetchError } from '#shared/robots/types'
+import type { FetchError, ValidationIssue } from '#shared/robots/types'
 
 const emit = defineEmits<{
   analyzeUrl: [url: string]
@@ -13,6 +13,7 @@ const props = defineProps<{
   initialPastedText?: string
   loadedUrl?: string | null
   loadedText?: string | null
+  validationIssues?: ValidationIssue[]
 }>()
 
 const url = ref(props.initialUrl ?? '')
@@ -109,6 +110,7 @@ watch(pastedText, (value) => {
         <RobotsLineNumberTextarea
           v-model="pastedText"
           :rows="12"
+          :validation-issues="props.validationIssues ?? []"
           placeholder="User-agent: *
 Disallow: /private/"
         />

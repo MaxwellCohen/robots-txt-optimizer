@@ -137,6 +137,7 @@ useSeoMeta({
       :initial-pasted-text="initialPastedText"
       :loaded-url="loadedUrl"
       :loaded-text="fetchedText"
+      :validation-issues="analysis?.validation.issues ?? []"
       @analyze-url="onAnalyzeUrl"
       @analyze-text="onAnalyzeText"
     />
