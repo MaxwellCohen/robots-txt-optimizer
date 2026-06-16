@@ -66,4 +66,17 @@ Allow: /`)
       '*'
     ])
   })
+
+  it('includes extra user agents not present in the document', () => {
+    const doc = parseRobotsTxt(`User-agent: *
+Disallow:`)
+
+    expect(collectUserAgentOptions(doc, ['PerplexityBot', ' PerplexityBot '])).toEqual([
+      'Bingbot',
+      'Googlebot',
+      'GPTBot',
+      'PerplexityBot',
+      '*'
+    ])
+  })
 })

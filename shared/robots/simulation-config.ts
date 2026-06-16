@@ -61,11 +61,20 @@ export function decodeSimulationConfig(json: string): SimulationConfig | null {
   }
 }
 
-export function collectUserAgentOptions(document: RobotsDocument): string[] {
+export function collectUserAgentOptions(
+  document: RobotsDocument,
+  extraAgents: readonly string[] = []
+): string[] {
   const agents = new Set<string>(DEFAULT_USER_AGENTS)
   for (const group of document.groups) {
     for (const agent of group.userAgents) {
       agents.add(agent)
+    }
+  }
+  for (const agent of extraAgents) {
+    const trimmed = agent.trim()
+    if (trimmed) {
+      agents.add(trimmed)
     }
   }
 

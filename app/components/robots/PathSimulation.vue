@@ -18,7 +18,7 @@ const emit = defineEmits<{
 }>()
 
 const userAgentOptions = computed(() =>
-  collectUserAgentOptions(props.document).map(agent => agent)
+  collectUserAgentOptions(props.document, props.config.userAgents)
 )
 
 const selectedUserAgents = computed({
@@ -30,6 +30,17 @@ const selectedUserAgents = computed({
     emit('update:config', { ...props.config, userAgents })
   }
 })
+
+function onCreateUserAgent(agent: string) {
+  const trimmed = agent.trim()
+  if (!trimmed || props.config.userAgents.includes(trimmed)) {
+    return
+  }
+  emit('update:config', {
+    ...props.config,
+    userAgents: [...props.config.userAgents, trimmed]
+  })
+}
 
 const paths = computed({
   get: () => props.config.paths,
@@ -108,9 +119,10 @@ const tableData = computed(() =>
                 v-model="selectedUserAgents"
                 :items="userAgentOptions"
                 multiple
-                create-item
+                create-item="always"
                 placeholder="Select user-agents"
                 class="w-full"
+                @create="onCreateUserAgent"
               />
             </UFormField>
 
