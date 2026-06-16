@@ -4,15 +4,29 @@ import {
   RobotsParsingReporter,
   RobotsTagName
 } from '@trybyte/robotstxt-parser'
+import { isUserAgentLineContent } from './parse'
 import type { RobotsDocument, ValidationIssue, ValidationResult } from './types'
 
-function issueFromParseError(err: unknown): ValidationIssue | null {
+function isUnexpectedCharacterError(message: string): boolean {
+  return message.includes('Unexpected Character')
+}
+
+function issueFromParseError(err: unknown, doc: RobotsDocument): ValidationIssue | null {
   if (!(err instanceof Error)) {
     return null
   }
   const lineMatch = err.message.match(/line[:\s]+(\d+)/i)
     ?? err.message.match(/at line (\d+)/i)
   const line = lineMatch ? Number(lineMatch[1]) : undefined
+
+  if (
+    line !== undefined
+    && isUnexpectedCharacterError(err.message)
+    && isUserAgentLineContent(doc.lines[line - 1] ?? '')
+  ) {
+    return null
+  }
+
   return {
     severity: 'error',
     message: err.message,
@@ -182,10 +196,10 @@ export function validateRobotsDocument(doc: RobotsDocument): ValidationResult {
   try {
     lintParse(doc.raw)
   } catch (err) {
-    const issue = issueFromParseError(err)
+    const issue = issueFromParseError(err, doc)
     if (issue) {
       issues.push(issue)
-    } else {
+    } else if (!(err instanceof Error)) {
       issues.push({
         severity: 'error',
         message: 'Failed to parse robots.txt'

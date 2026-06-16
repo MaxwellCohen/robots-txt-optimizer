@@ -44,6 +44,41 @@ describe('analyzeRobotsTxt', () => {
     expect(result.validation.issues.some(i => i.severity === 'error')).toBe(true)
   })
 
+  it('ignores unexpected characters on user-agent lines', () => {
+    const text = `User-agent: *
+Disallow: /
+
+User-agent: Botâtest
+Disallow: /admin`
+
+    const result = analyzeRobotsTxt(text)
+
+    expect(result.validation.ok).toBe(true)
+    expect(result.validation.issues.some(i => i.severity === 'error')).toBe(false)
+    expect(result.validation.issues.some(i => i.message.includes('Unexpected Character'))).toBe(false)
+    expect(result.validation.issues.some(i => i.message.includes('Failed to parse'))).toBe(false)
+  })
+
+  it('accepts unicode hyphens in user-agent names', () => {
+    const text = `User-agent: Perplexity\u2011User
+Disallow: /`
+
+    const result = analyzeRobotsTxt(text)
+
+    expect(result.validation.ok).toBe(true)
+    expect(result.validation.issues.some(i => i.severity === 'error')).toBe(false)
+  })
+
+  it('still reports unexpected characters on non-user-agent lines', () => {
+    const text = `User-agent: *
+Disallow: /adminâ/`
+
+    const result = analyzeRobotsTxt(text)
+
+    expect(result.validation.ok).toBe(false)
+    expect(result.validation.issues.some(i => i.message.includes('Unexpected Character'))).toBe(true)
+  })
+
   it('simulates longest-match allow over disallow', () => {
     const text = `User-agent: *
 Disallow: /blog/
