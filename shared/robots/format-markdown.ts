@@ -65,7 +65,7 @@ export function formatDirectiveSummaryMarkdown(rows: DirectiveSummaryRow[]): str
       escapeTableCell(formatPatternList(row.disallow, 'disallow', row.allow)),
       escapeTableCell(formatOtherList(row.other)),
       '|'
-    ].join(' '))
+    ].join('|'))
   }
 
   return lines.join('\n')
