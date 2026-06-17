@@ -1,6 +1,6 @@
 import { useDebounceFn } from '@vueuse/core'
-import { analyzeRobotsTxt } from '#shared/robots'
-import type { RobotsAnalysis } from '#shared/robots/types'
+import { analyzeRobotsTxt } from '@robots-txt-optimizer/core'
+import type { RobotsAnalysis } from '@robots-txt-optimizer/core'
 
 export function useRobotsAnalysis() {
   const robotsText = ref('')

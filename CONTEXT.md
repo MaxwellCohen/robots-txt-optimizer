@@ -27,3 +27,11 @@ Simulated allowed/blocked result for a `(userAgent, path)` pair, including the m
 ## Optimization suggestion
 
 Actionable change: remove duplicate directive, remove dead rule, merge duplicate groups, etc.
+
+## Robots engine
+
+The `@robots-txt-optimizer/core` package — parse, validate, analyze, optimize, and fetch logic. All analysis modules operate on a `RobotsDocument`, not raw text. Consumable from the Nuxt app, a future CLI, or other tools without UI coupling.
+
+## Fetch seam
+
+Universal robots.txt fetch (`@robots-txt-optimizer/core/fetch`) plus a Node SSRF-safe adapter (`@robots-txt-optimizer/core/node`). URL normalization and response validation live in the fetch module; the Nuxt server route maps domain errors to HTTP status codes.

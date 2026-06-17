@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defaultSimulationConfig, type SimulationConfig } from '#shared/robots'
+import { defaultSimulationConfig, type SimulationConfig } from '@robots-txt-optimizer/core'
 
 const route = useRoute()
 const router = useRouter()

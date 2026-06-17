@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ValidationIssue } from '#shared/robots/types'
+import type { ValidationIssue } from '@robots-txt-optimizer/core'
 
 const model = defineModel<string>({ default: '' })
 

@@ -11,6 +11,10 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  build: {
+    transpile: ['@robots-txt-optimizer/core']
+  },
+
   routeRules: {
     '/': { prerender: true },
     '/robots.txt': { prerender: true },

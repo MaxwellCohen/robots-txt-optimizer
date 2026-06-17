@@ -1,3 +1,10 @@
+import {
+  RobotsFetchError,
+  RobotsFetchSecurityError,
+  RobotsUrlError
+} from '@robots-txt-optimizer/core/fetch'
+import { secureFetchRobotsTxt } from '@robots-txt-optimizer/core/node'
+
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const urlParam = query.url
@@ -6,16 +13,19 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Missing url query parameter' })
   }
 
-  const robotsUrl = normalizeRobotsUrl(urlParam)
-  await assertPublicHost(robotsUrl)
-
-  const result = await fetchRobotsFromUrl(robotsUrl)
-
-  return {
-    text: result.text,
-    finalUrl: result.finalUrl,
-    status: result.status,
-    contentType: result.contentType,
-    source: 'server' as const
+  try {
+    return await secureFetchRobotsTxt(urlParam)
+  } catch (err) {
+    if (err instanceof RobotsUrlError) {
+      throw createError({ statusCode: 400, message: err.message })
+    }
+    if (err instanceof RobotsFetchSecurityError) {
+      throw createError({ statusCode: 403, message: err.message })
+    }
+    if (err instanceof RobotsFetchError) {
+      const statusCode = err.code === 'TOO_LARGE' ? 413 : 504
+      throw createError({ statusCode, message: err.message })
+    }
+    throw err
   }
 })

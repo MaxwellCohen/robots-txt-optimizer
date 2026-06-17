@@ -36,12 +36,13 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Project structure
 
 ```
-app/                    # UI (pages, components, composables)
-server/api/robots/      # Server-side fetch endpoint (CORS fallback)
-shared/robots/          # Core analysis engine (parse, validate, simulate, optimize)
+app/                         # UI (pages, components, composables)
+app/utils/url-text.ts        # Shareable URL compression (?r=, ?s= query params)
+packages/core/               # @robots-txt-optimizer/core — parse, validate, fetch, analyze, optimize
+server/api/robots/           # Server-side fetch endpoint (CORS fallback)
 ```
 
-The analysis logic in `shared/robots/` is framework-agnostic and covered by unit tests.
+The robots engine in `packages/core/` is framework-agnostic and covered by unit tests. Import it from `@robots-txt-optimizer/core` in the app or from a future CLI package.
 
 ## License
 

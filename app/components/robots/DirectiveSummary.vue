@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import type { DirectiveSummaryRow } from '#shared/robots/types'
-import { explainOtherDirective, explainPattern } from '#shared/robots/explain-pattern'
-import { formatDirectiveSummaryMarkdown } from '#shared/robots/format-markdown'
+import type { DirectiveSummaryRow } from '@robots-txt-optimizer/core'
+import { explainOtherDirective, explainPattern, formatDirectiveSummaryMarkdown } from '@robots-txt-optimizer/core'
 
 const props = defineProps<{
   rows: DirectiveSummaryRow[]

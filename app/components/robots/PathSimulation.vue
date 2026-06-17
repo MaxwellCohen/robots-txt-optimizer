@@ -6,7 +6,7 @@ import {
   SIMULATION_ORIGIN,
   type RobotsDocument,
   type SimulationConfig
-} from '#shared/robots'
+} from '@robots-txt-optimizer/core'
 
 const props = defineProps<{
   document: RobotsDocument

@@ -4,8 +4,8 @@ import {
   encodeSimulationConfig,
   isDefaultSimulationConfig,
   type SimulationConfig
-} from '#shared/robots/simulation-config'
-import { compressTextForUrl, decompressTextFromUrl } from '#shared/robots/url-text'
+} from '@robots-txt-optimizer/core'
+import { compressTextForUrl, decompressTextFromUrl } from '~/utils/url-text'
 
 export const SIMULATION_QUERY_KEY = 's'
 

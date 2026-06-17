@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ValidationResult } from '#shared/robots/types'
+import type { ValidationResult } from '@robots-txt-optimizer/core'
 
 defineProps<{
   validation: ValidationResult

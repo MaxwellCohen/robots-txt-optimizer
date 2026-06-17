@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FetchError, ValidationIssue } from '#shared/robots/types'
+import type { FetchError, ValidationIssue } from '@robots-txt-optimizer/core'
 
 const emit = defineEmits<{
   analyzeUrl: [url: string]

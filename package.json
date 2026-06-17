@@ -9,16 +9,15 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "typecheck": "nuxt typecheck",
-    "test": "vitest run"
+    "test": "pnpm --filter @robots-txt-optimizer/core test"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.111",
     "@iconify-json/simple-icons": "^1.2.85",
     "@nuxt/ui": "^4.8.2",
-    "@trybyte/robotstxt-parser": "^1.2.0",
+    "@robots-txt-optimizer/core": "workspace:*",
     "@vueuse/core": "^14.3.0",
     "nuxt": "^4.4.8",
-    "robots-linter": "^0.7.0",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {

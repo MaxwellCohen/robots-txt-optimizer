@@ -8,7 +8,6 @@ import {
   isDefaultSimulationConfig,
   normalizeSimulationPath
 } from './simulation-config'
-import { compressTextForUrl, decompressTextFromUrl } from './url-text'
 
 describe('simulation-config', () => {
   it('normalizes paths to start with /', () => {
@@ -33,14 +32,6 @@ describe('simulation-config', () => {
   it('rejects invalid config payloads', () => {
     expect(decodeSimulationConfig('{}')).toBeNull()
     expect(decodeSimulationConfig('{"userAgents":[],"paths":["/"]}')).toBeNull()
-  })
-
-  it('compresses and decompresses like robots.txt text', async () => {
-    const json = encodeSimulationConfig(defaultSimulationConfig())
-    const encoded = await compressTextForUrl(json)
-    const decoded = decodeSimulationConfig(await decompressTextFromUrl(encoded))
-
-    expect(decoded).toEqual(defaultSimulationConfig())
   })
 
   it('detects the default simulation config', () => {

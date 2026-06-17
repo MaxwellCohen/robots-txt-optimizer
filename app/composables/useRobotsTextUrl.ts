@@ -1,5 +1,5 @@
 import { useDebounceFn } from '@vueuse/core'
-import { compressTextForUrl, decompressTextFromUrl } from '#shared/robots/url-text'
+import { compressTextForUrl, decompressTextFromUrl } from '~/utils/url-text'
 
 export const ROBOTS_TEXT_QUERY_KEY = 'r'
 

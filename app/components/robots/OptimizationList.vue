@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { OptimizationSuggestion } from '#shared/robots/types'
+import type { OptimizationSuggestion } from '@robots-txt-optimizer/core'
 
 const props = defineProps<{
   suggestions: OptimizationSuggestion[]

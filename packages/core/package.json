@@ -1,0 +1,24 @@
+{
+  "name": "@robots-txt-optimizer/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fetch": "./src/fetch/index.ts",
+    "./node": "./src/fetch/node.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@trybyte/robotstxt-parser": "^1.2.0",
+    "robots-linter": "^0.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}
