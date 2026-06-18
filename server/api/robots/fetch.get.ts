@@ -13,8 +13,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Missing url query parameter' })
   }
 
+  const userAgent = getHeader(event, 'user-agent')
+
   try {
-    return await secureFetchRobotsTxt(urlParam)
+    return await secureFetchRobotsTxt(urlParam, { userAgent })
   } catch (err) {
     if (err instanceof RobotsUrlError) {
       throw createError({ statusCode: 400, message: err.message })

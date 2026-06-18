@@ -73,11 +73,18 @@ export async function assertPublicHost(url: URL): Promise<void> {
   }
 }
 
-export async function secureFetchRobotsTxt(input: string): Promise<FetchResult> {
+export interface SecureFetchRobotsTxtOptions {
+  userAgent?: string
+}
+
+export async function secureFetchRobotsTxt(
+  input: string,
+  options: SecureFetchRobotsTxtOptions = {}
+): Promise<FetchResult> {
   const url = normalizeRobotsUrl(input)
   await assertPublicHost(url)
   return await fetchRobotsTxt(url, {
-    userAgent: 'robots-txt-optimizer/1.0',
+    userAgent: options.userAgent,
     source: 'server'
   })
 }
