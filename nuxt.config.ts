@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   ],
 
   devtools: {
-    enabled: true
+    enabled: process.env.NODE_ENV === 'development'
   },
 
   css: ['~/assets/css/main.css'],
@@ -22,6 +22,10 @@ export default defineNuxtConfig({
   },
 
   compatibilityDate: '2025-01-15',
+
+  nitro: {
+    preset: 'static'
+  },
 
   eslint: {
     config: {

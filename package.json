@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.111",
-    "@iconify-json/simple-icons": "^1.2.85",
     "@nuxt/ui": "^4.8.2",
     "@robots-txt-optimizer/core": "workspace:*",
     "@vueuse/core": "^14.3.0",
