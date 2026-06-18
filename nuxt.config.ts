@@ -22,10 +22,10 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    '/': { prerender: true },
+    '/': { prerender: true, static: true, headers: { 'Cache-Control': 'public, max-age=3600' } },
     '/robots.txt': { prerender: true },
     '/llms.txt': { prerender: true },
-    '/api/**': { prerender: false }
+    '/api/**': { prerender: false, cors: true }
   },
 
   compatibilityDate: '2025-01-15',
