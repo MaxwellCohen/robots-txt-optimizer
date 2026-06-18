@@ -35,6 +35,8 @@ export {
   encodeSimulationConfig,
   isDefaultSimulationConfig,
   normalizeSimulationPath,
+  parseSimulationPaths,
+  SIMULATION_PATH_DELIMITER,
   type SimulationConfig
 } from './simulation-config'
 export { explainPattern, explainOtherDirective } from './explain-pattern'

@@ -6,7 +6,8 @@ import {
   defaultSimulationConfig,
   encodeSimulationConfig,
   isDefaultSimulationConfig,
-  normalizeSimulationPath
+  normalizeSimulationPath,
+  parseSimulationPaths
 } from './simulation-config'
 
 describe('simulation-config', () => {
@@ -14,6 +15,24 @@ describe('simulation-config', () => {
     expect(normalizeSimulationPath('admin')).toBe('/admin')
     expect(normalizeSimulationPath('/api/')).toBe('/api/')
     expect(normalizeSimulationPath('  ')).toBe('')
+  })
+
+  it('parses multiple pasted paths', () => {
+    expect(parseSimulationPaths('/admin\n/api/\n/search')).toEqual([
+      '/admin',
+      '/api/',
+      '/search'
+    ])
+    expect(parseSimulationPaths('/admin, /api/, /search')).toEqual([
+      '/admin',
+      '/api/',
+      '/search'
+    ])
+    expect(parseSimulationPaths('admin api/search')).toEqual([
+      '/admin',
+      '/api/search'
+    ])
+    expect(parseSimulationPaths('/admin\n/admin')).toEqual(['/admin'])
   })
 
   it('round-trips config through JSON', () => {

@@ -2,6 +2,7 @@
 import {
   collectUserAgentOptions,
   normalizeSimulationPath,
+  SIMULATION_PATH_DELIMITER,
   simulatePaths,
   SIMULATION_ORIGIN,
   type RobotsDocument,
@@ -45,10 +46,11 @@ function onCreateUserAgent(agent: string) {
 const paths = computed({
   get: () => props.config.paths,
   set: (nextPaths: string[]) => {
-    if (nextPaths.length === 0) {
+    const normalized = nextPaths.map(normalizeSimulationPath).filter(Boolean)
+    if (normalized.length === 0) {
       return
     }
-    emit('update:config', { ...props.config, paths: nextPaths })
+    emit('update:config', { ...props.config, paths: normalized })
   }
 })
 
@@ -128,10 +130,12 @@ const tableData = computed(() =>
 
             <UFormField
               label="Paths"
-              hint="Type a path and press Enter to add"
+              hint="Type a path and press Enter, or paste multiple paths separated by newlines, spaces, or commas"
             >
               <UInputTags
                 v-model="paths"
+                add-on-paste
+                :delimiter="SIMULATION_PATH_DELIMITER"
                 :convert-value="normalizeSimulationPath"
                 placeholder="/your-path"
                 class="w-full font-mono"

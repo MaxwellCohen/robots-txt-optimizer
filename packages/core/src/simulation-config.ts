@@ -21,6 +21,24 @@ export function normalizeSimulationPath(path: string): string {
   return trimmed.startsWith('/') ? trimmed : `/${trimmed}`
 }
 
+/** Splits pasted or typed multi-path input on whitespace, commas, or semicolons. */
+export const SIMULATION_PATH_DELIMITER = /[\s,;]+/
+
+export function parseSimulationPaths(text: string): string[] {
+  const seen = new Set<string>()
+  const paths: string[] = []
+
+  for (const part of text.split(SIMULATION_PATH_DELIMITER)) {
+    const normalized = normalizeSimulationPath(part)
+    if (normalized && !seen.has(normalized)) {
+      seen.add(normalized)
+      paths.push(normalized)
+    }
+  }
+
+  return paths
+}
+
 export function encodeSimulationConfig(config: SimulationConfig): string {
   return JSON.stringify({
     userAgents: config.userAgents,
