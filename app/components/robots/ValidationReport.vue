@@ -10,7 +10,7 @@ defineProps<{
   <div class="space-y-4">
     <UAlert
       v-if="validation.ok"
-      color="success"
+      color="primary"
       variant="subtle"
       icon="i-lucide-check-circle"
       title="Validation passed"

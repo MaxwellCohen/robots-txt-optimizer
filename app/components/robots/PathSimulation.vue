@@ -68,7 +68,7 @@ const tableData = computed(() =>
     userAgent: v.userAgent,
     path: v.path,
     verdict: v.allowed ? 'Allowed' : 'Blocked',
-    verdictColor: (v.allowed ? 'success' : 'error') as 'success' | 'error',
+    verdictColor: (v.allowed ? 'primary' : 'error') as 'primary' | 'error',
     matchedRule: v.matchingLine > 0
       ? `Line ${v.matchingLine}: ${v.matchedRuleType} ${v.matchedRule}`
       : v.matchedRule

@@ -11,6 +11,12 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  ui: {
+    theme: {
+      colors: ['error', 'warning', 'neutral']
+    }
+  },
+
   build: {
     transpile: ['@robots-txt-optimizer/core']
   },
