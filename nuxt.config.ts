@@ -29,7 +29,7 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    '/': { prerender: true, static: true, headers: { 'Cache-Control': 'public, max-age=3600' } },
+    '/': { prerender: true, headers: { 'Cache-Control': 'public, max-age=3600' } },
     '/robots.txt': { prerender: true },
     '/llms.txt': { prerender: true },
     '/api/**': { prerender: false }
