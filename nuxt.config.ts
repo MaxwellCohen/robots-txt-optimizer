@@ -39,7 +39,7 @@ export default defineNuxtConfig({
 
   nitro: {
     // Hybrid: prerender pages (routeRules above) but deploy /api/** as Vercel serverless functions.
-    preset: 'vercel'
+    preset: 'static'
   },
 
   eslint: {
