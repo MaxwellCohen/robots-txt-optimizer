@@ -17,6 +17,13 @@ export default defineNuxtConfig({
     }
   },
 
+  runtimeConfig: {
+    public: {
+      // Set NUXT_PUBLIC_ROBOTS_FETCH_CLIENT_FIRST=false to skip browser fetch and use the server proxy only.
+      robotsFetchClientFirst: true
+    }
+  },
+
   build: {
     transpile: ['@robots-txt-optimizer/core']
   },
@@ -31,7 +38,8 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-01-15',
 
   nitro: {
-    preset: 'static'
+    // Hybrid: prerender pages (routeRules above) but deploy /api/** as Vercel serverless functions.
+    preset: 'vercel'
   },
 
   eslint: {
