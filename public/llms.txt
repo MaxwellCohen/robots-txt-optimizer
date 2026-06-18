@@ -1,0 +1,18 @@
+# Robots.txt Optimizer
+
+> Web app and TypeScript library for validating, analyzing, and optimizing robots.txt files — check syntax, summarize allow/block rules per user-agent, simulate crawler access, and get cleanup suggestions.
+
+Robots.txt Optimizer is a Nuxt static web app backed by `@robots-txt-optimizer/core`, a framework-agnostic robots engine. Paste robots.txt content or fetch from a URL (with a server-side CORS fallback), then review validation issues, directive summaries, path simulation for common crawlers (Googlebot, Bingbot, GPTBot), and optimization suggestions. Share analyses via `?url=example.com`.
+
+## App
+
+- [Source & quick start](https://github.com/MaxwellCohen/robots-txt-optimizer#quick-start): Clone the repo, run `pnpm dev`, and open the site root to analyze robots.txt.
+
+## Documentation
+
+- [README](https://github.com/MaxwellCohen/robots-txt-optimizer/blob/main/README.md): Features, quick start, scripts, and project structure.
+- [CONTEXT.md](https://github.com/MaxwellCohen/robots-txt-optimizer/blob/main/CONTEXT.md): Domain glossary — RobotsDocument, path verdict, optimization suggestion, fetch seam.
+
+## Optional
+
+- [packages/core](https://github.com/MaxwellCohen/robots-txt-optimizer/tree/main/packages/core): Framework-agnostic parse, validate, analyze, optimize, and fetch modules with unit tests.
