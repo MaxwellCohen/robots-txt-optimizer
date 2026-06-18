@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { analyzeRobotsTxt, parseRobotsTxt } from './index'
+import { analyzeRobotsTxt, parseRobotsTxt, simulatePaths } from './index'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -67,6 +67,20 @@ Disallow: /`
 
     expect(result.validation.ok).toBe(true)
     expect(result.validation.issues.some(i => i.severity === 'error')).toBe(false)
+  })
+
+  it('accepts spaces in user-agent names', () => {
+    const text = `User-agent: Perplexity User
+Disallow: /`
+
+    const result = analyzeRobotsTxt(text)
+
+    expect(result.validation.ok).toBe(true)
+    expect(result.validation.issues.some(i => i.severity === 'error')).toBe(false)
+    expect(result.document.groups[0]?.userAgents).toEqual(['Perplexity User'])
+
+    const verdict = simulatePaths(result.document, ['Perplexity User'], ['/'])[0]
+    expect(verdict?.allowed).toBe(false)
   })
 
   it('still reports unexpected characters on non-user-agent lines', () => {

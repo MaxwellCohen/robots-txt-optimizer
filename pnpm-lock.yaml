@@ -51,9 +51,6 @@ importers:
 
   packages/core:
     dependencies:
-      '@trybyte/robotstxt-parser':
-        specifier: ^1.2.0
-        version: 1.2.0
       robots-linter:
         specifier: ^0.7.0
         version: 0.7.0
@@ -2044,10 +2041,6 @@ packages:
       prosemirror-view: ^1.9.10
       y-protocols: ^1.0.1
       yjs: ^13.5.38
-
-  '@trybyte/robotstxt-parser@1.2.0':
-    resolution: {integrity: sha512-AywmLqMu0ljMLEPVb4oPxwnyFmm3xxOS6LmwRia5jgqvzrBAoXXR0JWXEXaq/IG3tlFSXuAp+XzAabrijYzyUQ==}
-    engines: {node: '>=20.0.0'}
 
   '@tybys/wasm-util@0.10.2':
     resolution: {integrity: sha512-RoBvJ2X0wuKlWFIjrwffGw1IqZHKQqzIchKaadZZfnNpsAYp2mM0h36JtPCjNDAHGgYez/15uMBpfGwchhiMgg==}
@@ -7344,8 +7337,6 @@ snapshots:
       prosemirror-view: 1.41.8
       y-protocols: 1.0.7(yjs@13.6.30)
       yjs: 13.6.30
-
-  '@trybyte/robotstxt-parser@1.2.0': {}
 
   '@tybys/wasm-util@0.10.2':
     dependencies:

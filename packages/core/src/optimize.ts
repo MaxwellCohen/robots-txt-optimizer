@@ -1,4 +1,3 @@
-import { ParsedRobots } from '@trybyte/robotstxt-parser'
 import type {
   Directive,
   OptimizationSuggestion,
@@ -6,7 +5,8 @@ import type {
   UserAgentGroup
 } from './types'
 import { isUserAgentLineContent, parseRobotsTxt } from './parse'
-import { DEFAULT_PATHS, SIMULATION_ORIGIN } from './paths'
+import { DEFAULT_PATHS } from './paths'
+import { checkRobotsPath } from './match'
 
 function directiveKey(d: Directive): string {
   return `${d.type}:${d.value}`
@@ -204,12 +204,11 @@ function isRuleDeadForAgent(
 ): boolean {
   const { text: withoutText } = buildGroupTextForAgent(group, agent, directiveIndex)
   const { text: withText } = buildGroupTextForAgent(group, agent)
-  const withoutParsed = ParsedRobots.parse(withoutText)
-  const withParsed = ParsedRobots.parse(withText)
-
   for (const path of probePaths) {
-    const url = `${SIMULATION_ORIGIN}${path}`
-    if (withoutParsed.checkUrl(agent, url).allowed !== withParsed.checkUrl(agent, url).allowed) {
+    if (
+      checkRobotsPath(withoutText, agent, path).allowed
+      !== checkRobotsPath(withText, agent, path).allowed
+    ) {
       return false
     }
   }
@@ -240,15 +239,13 @@ function findSupersedingDirective(
     agent,
     deadEntry.index
   )
-  const withoutParsed = ParsedRobots.parse(withoutDeadText)
   const relevantPaths = pathsFromPattern(deadEntry.d.value)
 
   let earliest: Directive | null = null
 
   for (const path of relevantPaths) {
-    const url = `${SIMULATION_ORIGIN}${path}`
-    const result = withoutParsed.checkUrl(agent, url)
-    if (result.matchingLine === undefined || result.matchingLine === null) {
+    const result = checkRobotsPath(withoutDeadText, agent, path)
+    if (!result.matchingLine) {
       continue
     }
     const winner = lineToDirective.get(result.matchingLine)

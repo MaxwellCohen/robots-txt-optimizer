@@ -8,7 +8,7 @@ Built with [Nuxt](https://nuxt.com) and [Nuxt UI](https://ui.nuxt.com).
 
 - **Fetch or paste** — Load `robots.txt` from a domain (with server-side fallback when CORS blocks the browser) or paste content manually
 - **Shareable URLs** — Analyze a site via `/?url=example.com`
-- **Validation** — Syntax and spec checks using [robots-linter](https://www.npmjs.com/package/robots-linter) and [@trybyte/robotstxt-parser](https://www.npmjs.com/package/@trybyte/robotstxt-parser)
+- **Validation** — Syntax and spec checks using [robots-linter](https://www.npmjs.com/package/robots-linter)
 - **Directive summary** — Allow, disallow, and other rules grouped by user-agent
 - **Path simulation** — See how common crawlers (Googlebot, Bingbot, GPTBot, `*`) would treat typical paths
 - **Optimization** — Detect duplicate rules, dead rules, redundant catch-alls, empty groups, and missing user-agents; preview a cleaned-up file

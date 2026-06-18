@@ -1,14 +1,21 @@
 import { parse as lintParse } from 'robots-linter'
-import {
-  parseRobotsTxt as googleParse,
-  RobotsParsingReporter,
-  RobotsTagName
-} from '@trybyte/robotstxt-parser'
-import { isUserAgentLineContent } from './parse'
+import { isUserAgentLineContent, stripComment } from './parse'
+import { textForLint, normalizeDirectiveName } from './robots-text'
 import type { RobotsDocument, ValidationIssue, ValidationResult } from './types'
+
+const NON_RFC_DIRECTIVES = new Set(['crawldelay', 'host'])
+const MAX_LINE_LENGTH = 4096
 
 function isUnexpectedCharacterError(message: string): boolean {
   return message.includes('Unexpected Character')
+}
+
+function isInvalidProductTokenError(message: string): boolean {
+  return message.includes('Product token MUST only contains')
+}
+
+function isUnexpectedTokenError(message: string): boolean {
+  return message.includes('Unexpected Token')
 }
 
 function issueFromParseError(err: unknown, doc: RobotsDocument): ValidationIssue | null {
@@ -21,7 +28,11 @@ function issueFromParseError(err: unknown, doc: RobotsDocument): ValidationIssue
 
   if (
     line !== undefined
-    && isUnexpectedCharacterError(err.message)
+    && (
+      isUnexpectedCharacterError(err.message)
+      || isInvalidProductTokenError(err.message)
+      || isUnexpectedTokenError(err.message)
+    )
     && isUserAgentLineContent(doc.lines[line - 1] ?? '')
   ) {
     return null
@@ -39,8 +50,7 @@ function directiveNameAtLine(doc: RobotsDocument, lineNum: number): string | und
   if (raw === undefined) {
     return undefined
   }
-  const hashIndex = raw.indexOf('#')
-  const content = (hashIndex === -1 ? raw : raw.slice(0, hashIndex)).trim()
+  const content = stripComment(raw)
   const colonIndex = content.indexOf(':')
   if (colonIndex === -1) {
     return undefined
@@ -49,16 +59,19 @@ function directiveNameAtLine(doc: RobotsDocument, lineNum: number): string | und
   return name || undefined
 }
 
-function collectReporterIssues(
-  reporter: RobotsParsingReporter,
-  doc: RobotsDocument
-): ValidationIssue[] {
+function collectDirectiveWarnings(doc: RobotsDocument): ValidationIssue[] {
   const issues: ValidationIssue[] = []
 
-  for (const result of reporter.parseResults()) {
-    const { lineNum, tagName, isTypo, metadata } = result
+  for (let i = 0; i < doc.lines.length; i++) {
+    const lineNum = i + 1
+    const raw = doc.lines[i]!
+    const content = stripComment(raw)
 
-    if (metadata.isLineTooLong) {
+    if (!content) {
+      continue
+    }
+
+    if (raw.length > MAX_LINE_LENGTH) {
       issues.push({
         severity: 'warning',
         message: 'Line exceeds maximum recommended length',
@@ -66,23 +79,20 @@ function collectReporterIssues(
       })
     }
 
-    if (metadata.isMissingColonSeparator) {
+    const colonIndex = content.indexOf(':')
+    if (colonIndex === -1) {
       issues.push({
         severity: 'error',
         message: 'Missing colon separator between directive and value',
         line: lineNum
       })
+      continue
     }
 
-    if (tagName === RobotsTagName.Unknown && metadata.hasDirective) {
-      issues.push({
-        severity: 'warning',
-        message: 'Unrecognized or unparseable directive',
-        line: lineNum
-      })
-    }
+    const name = content.slice(0, colonIndex).trim()
+    const normalized = normalizeDirectiveName(name)
 
-    if (isTypo) {
+    if (normalized === 'disalow' || normalized === 'dissallow') {
       issues.push({
         severity: 'warning',
         message: 'Directive appears to be a typo (accepted by crawlers but non-standard)',
@@ -90,15 +100,29 @@ function collectReporterIssues(
       })
     }
 
-    if (tagName === RobotsTagName.Unused) {
-      const directiveName = directiveNameAtLine(doc, lineNum)
-      const label = directiveName ? `Directive "${directiveName}"` : 'Directive'
+    if (normalized === 'useragent' || normalized === 'sitemap') {
+      continue
+    }
+
+    if (normalized === 'allow' || normalized === 'disallow') {
+      continue
+    }
+
+    if (NON_RFC_DIRECTIVES.has(normalized)) {
+      const directiveName = directiveNameAtLine(doc, lineNum) ?? name
       issues.push({
         severity: 'warning',
-        message: `${label} is recognized but not part of RFC 9309 (may be ignored by crawlers)`,
+        message: `Directive "${directiveName}" is recognized but not part of RFC 9309 (may be ignored by crawlers)`,
         line: lineNum
       })
+      continue
     }
+
+    issues.push({
+      severity: 'warning',
+      message: 'Unrecognized or unparseable directive',
+      line: lineNum
+    })
   }
 
   return issues
@@ -194,7 +218,7 @@ export function validateRobotsDocument(doc: RobotsDocument): ValidationResult {
   const issues: ValidationIssue[] = []
 
   try {
-    lintParse(doc.raw)
+    lintParse(textForLint(doc))
   } catch (err) {
     const issue = issueFromParseError(err, doc)
     if (issue) {
@@ -207,9 +231,7 @@ export function validateRobotsDocument(doc: RobotsDocument): ValidationResult {
     }
   }
 
-  const reporter = new RobotsParsingReporter()
-  googleParse(doc.raw, reporter)
-  issues.push(...collectReporterIssues(reporter, doc))
+  issues.push(...collectDirectiveWarnings(doc))
   issues.push(...collectSemanticIssues(doc))
 
   const deduped = dedupeIssues(issues)

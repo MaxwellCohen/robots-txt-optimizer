@@ -1,10 +1,10 @@
-import { ParsedRobots } from '@trybyte/robotstxt-parser'
 import type {
   DirectiveSummaryRow,
   PathVerdict,
   RobotsDocument
 } from './types'
-import { DEFAULT_PATHS, DEFAULT_USER_AGENTS, SIMULATION_ORIGIN } from './paths'
+import { DEFAULT_PATHS, DEFAULT_USER_AGENTS } from './paths'
+import { checkRobotsPath } from './match'
 
 export function summarizeDirectives(doc: RobotsDocument): DirectiveSummaryRow[] {
   return doc.groups.flatMap((group, groupIndex) => {
@@ -50,21 +50,16 @@ export function simulatePaths(
   userAgents: readonly string[] = DEFAULT_USER_AGENTS,
   paths: readonly string[] = DEFAULT_PATHS
 ): PathVerdict[] {
-  const parsed = ParsedRobots.parse(doc.raw)
   const verdicts: PathVerdict[] = []
 
   for (const userAgent of userAgents) {
-    const urls = paths.map(path => `${SIMULATION_ORIGIN}${path}`)
-    const results = parsed.checkUrls(userAgent, urls)
-
-    for (let i = 0; i < paths.length; i++) {
-      const result = results[i]!
-      const path = paths[i]!
+    for (const path of paths) {
+      const result = checkRobotsPath(doc.raw, userAgent, path, doc)
       verdicts.push({
         userAgent,
         path,
         allowed: result.allowed,
-        matchedRule: result.matchedPattern || '(default allow)',
+        matchedRule: result.matchedPattern,
         matchedRuleType: result.matchedRuleType,
         matchingLine: result.matchingLine
       })
