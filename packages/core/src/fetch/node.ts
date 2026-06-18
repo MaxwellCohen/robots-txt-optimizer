@@ -84,7 +84,7 @@ export async function secureFetchRobotsTxt(
   const url = normalizeRobotsUrl(input)
   await assertPublicHost(url)
   return await fetchRobotsTxt(url, {
-    userAgent: options.userAgent,
+    userAgent: options.userAgent ?? 'robots-txt-optimizer/1.0',
     source: 'server'
   })
 }
