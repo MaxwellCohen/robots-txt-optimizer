@@ -25,7 +25,7 @@ export default defineNuxtConfig({
     '/': { prerender: true, static: true, headers: { 'Cache-Control': 'public, max-age=3600' } },
     '/robots.txt': { prerender: true },
     '/llms.txt': { prerender: true },
-    '/api/**': { prerender: false, cors: true }
+    '/api/**': { prerender: false }
   },
 
   compatibilityDate: '2025-01-15',
