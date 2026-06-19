@@ -49,8 +49,8 @@ watch(pastedText, (value) => {
 </script>
 
 <template>
-  <UCard>
-    <div class="space-y-4">
+  <div class="rounded-lg overflow-hidden bg-default ring ring-default divide-y divide-default">
+    <div class="space-y-4 p-4 sm:p-6">
       <UFormField
         label="Website URL"
         hint="We'll fetch /robots.txt from this site"
@@ -116,5 +116,5 @@ Disallow: /private/"
         />
       </UFormField>
     </div>
-  </UCard>
+  </div>
 </template>

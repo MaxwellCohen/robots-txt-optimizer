@@ -1,8 +1,3 @@
-import {
-  fetchRobotsTxt,
-  normalizeRobotsUrl,
-  validateFetchResult
-} from '@robots-txt-optimizer/core/fetch'
 import type { FetchError, FetchResult } from '@robots-txt-optimizer/core'
 
 export interface RobotsFetchOptions {
@@ -26,6 +21,10 @@ async function fetchFromServer(input: string): Promise<FetchResult> {
   })
 }
 
+async function loadFetchModule() {
+  return await import('@robots-txt-optimizer/core/fetch')
+}
+
 export function useRobotsFetch() {
   const config = useRuntimeConfig()
   const loading = ref(false)
@@ -38,6 +37,7 @@ export function useRobotsFetch() {
     loading.value = true
     error.value = null
 
+    const { fetchRobotsTxt, normalizeRobotsUrl, validateFetchResult } = await loadFetchModule()
     const url = normalizeRobotsUrl(input)
     const tryClientFirst = options.tryClientFirst
       ?? config.public.robotsFetchClientFirst !== false

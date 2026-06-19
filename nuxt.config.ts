@@ -1,8 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   modules: [
-    '@nuxt/eslint',
-    '@nuxt/ui'
+    '@nuxt/ui',
+    ...(process.env.NODE_ENV === 'development' ? ['@nuxt/eslint'] as const : [])
   ],
 
   devtools: {
@@ -12,8 +12,13 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   ui: {
+    fonts: false,
     theme: {
-      colors: ['error', 'warning', 'neutral']
+      colors: ['primary', 'error', 'warning', 'neutral'],
+      transitions: false
+    },
+    experimental: {
+      componentDetection: true
     }
   },
 
@@ -42,12 +47,23 @@ export default defineNuxtConfig({
     preset: 'vercel'
   },
 
-  eslint: {
-    config: {
-      stylistic: {
-        commaDangle: 'never',
-        braceStyle: '1tbs'
-      }
+  icon: {
+    clientBundle: {
+      scan: true,
+      sizeLimitKb: 64
     }
-  }
+  },
+
+  ...(process.env.NODE_ENV === 'development'
+    ? {
+        eslint: {
+          config: {
+            stylistic: {
+              commaDangle: 'never',
+              braceStyle: '1tbs'
+            }
+          }
+        }
+      }
+    : {})
 })

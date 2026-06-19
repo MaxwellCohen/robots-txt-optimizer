@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./fetch": "./src/fetch/index.ts",
-    "./node": "./src/fetch/node.ts"
+    "./node": "./src/fetch/node.ts",
+    "./simulation-config": "./src/simulation-config.ts"
   },
   "scripts": {
     "test": "vitest run",
