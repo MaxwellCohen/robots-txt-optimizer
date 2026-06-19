@@ -34,17 +34,51 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    '/': { prerender: true, headers: { 'Cache-Control': 'public, max-age=3600' } },
-    '/robots.txt': { prerender: true },
-    '/llms.txt': { prerender: true },
+    // Prebuilt at deploy; CDN caches 24h with week-long stale-while-revalidate.
+    '/': {
+      prerender: true,
+      headers: {
+        'Cache-Control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+      }
+    },
+    '/robots.txt': {
+      prerender: true,
+      headers: {
+        'Cache-Control': 'public, max-age=3600, s-maxage=86400'
+      }
+    },
+    '/llms.txt': {
+      prerender: true,
+      headers: {
+        'Cache-Control': 'public, max-age=3600, s-maxage=86400'
+      }
+    },
+    '/_nuxt/**': {
+      headers: {
+        'Cache-Control': 'public, max-age=31536000, immutable'
+      }
+    },
     '/api/**': { prerender: false }
+  },
+
+  experimental: {
+    // Smaller prerendered HTML; state ships in a separate cacheable JSON payload.
+    payloadExtraction: true
   },
 
   compatibilityDate: '2025-01-15',
 
   nitro: {
     // Hybrid: prerender pages (routeRules above) but deploy /api/** as Vercel serverless functions.
-    preset: 'vercel'
+    preset: 'vercel',
+    prerender: {
+      crawlLinks: true,
+      routes: ['/', '/robots.txt', '/llms.txt']
+    },
+    compressPublicAssets: {
+      gzip: true,
+      brotli: true
+    }
   },
 
   icon: {

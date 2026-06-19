@@ -1,7 +1,5 @@
 <script setup lang="ts">
-const RobotsWorkspace = defineAsyncComponent(
-  () => import('~/components/robots/RobotsWorkspace.vue')
-)
+import RobotsWorkspace from '~/components/robots/RobotsWorkspace.vue'
 
 useSeoMeta({
   title: 'Robots.txt Optimizer',
