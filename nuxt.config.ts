@@ -1,9 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: [
-    '@nuxt/ui',
-    ...(process.env.NODE_ENV === 'development' ? ['@nuxt/eslint'] as const : [])
-  ],
+  modules: ['@nuxt/ui', '@nuxt/eslint'],
 
   devtools: {
     enabled: process.env.NODE_ENV === 'development'
@@ -81,23 +78,19 @@ export default defineNuxtConfig({
     }
   },
 
+  eslint: {
+    config: {
+      stylistic: {
+        commaDangle: 'never',
+        braceStyle: '1tbs'
+      }
+    }
+  },
+
   icon: {
     clientBundle: {
       scan: true,
       sizeLimitKb: 64
     }
-  },
-
-  ...(process.env.NODE_ENV === 'development'
-    ? {
-        eslint: {
-          config: {
-            stylistic: {
-              commaDangle: 'never',
-              braceStyle: '1tbs'
-            }
-          }
-        }
-      }
-    : {})
+  }
 })

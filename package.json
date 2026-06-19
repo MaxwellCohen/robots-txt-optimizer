@@ -7,7 +7,7 @@
     "dev": "nuxt dev",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "lint": "eslint .",
+    "lint": "nuxt prepare && eslint .",
     "typecheck": "nuxt typecheck",
     "test": "pnpm --filter @robots-txt-optimizer/core test"
   },
