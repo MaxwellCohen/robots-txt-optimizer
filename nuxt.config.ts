@@ -38,6 +38,12 @@ export default defineNuxtConfig({
         'Cache-Control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
       }
     },
+    '/about': {
+      prerender: true,
+      headers: {
+        'Cache-Control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+      }
+    },
     '/robots.txt': {
       prerender: true,
       headers: {
@@ -70,7 +76,7 @@ export default defineNuxtConfig({
     preset: 'vercel',
     prerender: {
       crawlLinks: true,
-      routes: ['/', '/robots.txt', '/llms.txt']
+      routes: ['/', '/about', '/robots.txt', '/llms.txt']
     },
     compressPublicAssets: {
       gzip: true,

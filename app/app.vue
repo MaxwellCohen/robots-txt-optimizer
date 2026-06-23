@@ -49,6 +49,13 @@ useHead({
         </NuxtLink>
 
         <div class="flex items-center gap-1.5">
+          <NuxtLink
+            to="/about"
+            class="rounded-md inline-flex items-center px-2.5 py-1.5 text-sm text-muted hover:text-default hover:bg-elevated"
+          >
+            About
+          </NuxtLink>
+
           <ClientOnly>
             <UColorModeButton />
           </ClientOnly>
