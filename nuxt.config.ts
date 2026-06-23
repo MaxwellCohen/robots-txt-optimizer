@@ -60,9 +60,7 @@ export default defineNuxtConfig({
 
   experimental: {
     // Smaller prerendered HTML; state ships in a separate cacheable JSON payload.
-    payloadExtraction: true,
-    // Allow defineRouteRules() in page files (e.g. app/pages/index.vue).
-    inlineRouteRules: true
+    payloadExtraction: true
   },
 
   compatibilityDate: '2025-01-15',

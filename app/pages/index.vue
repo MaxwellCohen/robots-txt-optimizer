@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import RobotsWorkspace from '~/components/robots/RobotsWorkspace.vue'
 
-defineRouteRules({
-  prerender: true
-})
-
 useSeoMeta({
   title: 'Robots.txt Optimizer',
   description: 'Validate, analyze, and optimize your robots.txt file. Check allow/block rules per user-agent and get improvement suggestions.',
