@@ -110,8 +110,10 @@ export function userAgentMatches(ruleAgent: string, requestAgent: string): boole
   const rule = normalizeUserAgentForMatch(ruleAgent)
   const request = normalizeUserAgentForMatch(requestAgent)
 
+  // `*` is a fallback group, not a universal match. Callers that need the
+  // catch-all must select it explicitly when no specific group matches.
   if (rule === '*') {
-    return true
+    return request === '*'
   }
 
   return request.includes(rule)

@@ -1,7 +1,12 @@
 import { decodePath, parse, type RobotRule, type Rule } from 'robots-linter'
 import type { RobotsDocument } from './types'
 import { stripComment } from './parse'
-import { normalizeDirectiveName, textForMatching, userAgentMatches } from './robots-text'
+import {
+  normalizeDirectiveName,
+  normalizeUserAgentForMatch,
+  textForMatching,
+  userAgentMatches
+} from './robots-text'
 
 export interface PathMatchResult {
   allowed: boolean
@@ -27,16 +32,18 @@ function toRegExpPath(path: string): RegExp {
   return new RegExp(`^${target}${suffix}`)
 }
 
-function getApplicableRules(robotRules: RobotRule[], userAgent: string): Rule[] {
-  const matches = robotRules.filter(rr => userAgentMatches(rr.userAgent, userAgent))
+function isStarUserAgent(agent: string): boolean {
+  return normalizeUserAgentForMatch(agent) === '*'
+}
 
-  if (matches.length === 0) {
-    const star = robotRules.find(rr => rr.userAgent === '*')
-    if (!star) {
-      return []
-    }
-    return [...star.rules]
-  }
+function getApplicableRules(robotRules: RobotRule[], userAgent: string): Rule[] {
+  const specificMatches = robotRules.filter(
+    rr => !isStarUserAgent(rr.userAgent) && userAgentMatches(rr.userAgent, userAgent)
+  )
+
+  const matches = specificMatches.length > 0
+    ? specificMatches
+    : robotRules.filter(rr => isStarUserAgent(rr.userAgent))
 
   const rules: Rule[] = []
   for (const rr of matches) {
@@ -123,17 +130,37 @@ function buildRuleLineMap(robotsTxt: string): Map<number, number> {
   return map
 }
 
+function groupMatchesUserAgent(
+  groupAgents: string[],
+  userAgent: string,
+  mode: 'specific' | 'star'
+): boolean {
+  if (mode === 'star') {
+    return groupAgents.some(agent => isStarUserAgent(agent))
+  }
+
+  return groupAgents.some(
+    agent => !isStarUserAgent(agent) && userAgentMatches(agent, userAgent)
+  )
+}
+
 function buildDocumentRuleLineMap(doc: RobotsDocument, userAgent: string): Map<number, number> {
   const map = new Map<number, number>()
   let ruleIndex = 0
 
-  for (const group of doc.groups) {
-    const groupAgents = group.userAgents.length > 0 ? group.userAgents : ['*']
-    const applies = groupAgents.some(agent => userAgentMatches(agent, userAgent))
-    if (!applies) {
-      continue
-    }
+  const groups = doc.groups.map(group => ({
+    group,
+    agents: group.userAgents.length > 0 ? group.userAgents : ['*']
+  }))
 
+  const specificGroups = groups.filter(({ agents }) =>
+    groupMatchesUserAgent(agents, userAgent, 'specific')
+  )
+  const applicableGroups = specificGroups.length > 0
+    ? specificGroups
+    : groups.filter(({ agents }) => groupMatchesUserAgent(agents, userAgent, 'star'))
+
+  for (const { group } of applicableGroups) {
     for (const directive of group.directives) {
       if (directive.type !== 'allow' && directive.type !== 'disallow') {
         continue

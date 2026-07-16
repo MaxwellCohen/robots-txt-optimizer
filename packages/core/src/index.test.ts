@@ -106,6 +106,26 @@ Allow: /blog/post-1`
     expect(blogPost?.allowed).toBe(true)
   })
 
+  it('does not apply User-agent: * Allow rules when a specific group matches', () => {
+    const text = `User-agent: *
+Allow: /noodles
+Allow: /leaderboard/likes$
+Disallow: /
+
+User-agent: GPTBot
+Disallow: /`
+
+    const result = analyzeRobotsTxt(text)
+    const verdicts = simulatePaths(
+      result.document,
+      ['GPTBot', '*'],
+      ['/noodles', '/leaderboard/likes']
+    )
+
+    expect(verdicts.filter(v => v.userAgent === 'GPTBot').every(v => !v.allowed)).toBe(true)
+    expect(verdicts.filter(v => v.userAgent === '*').every(v => v.allowed)).toBe(true)
+  })
+
   it('produces optimized text without duplicate rules', () => {
     const result = analyzeRobotsTxt(loadFixture('sample.txt'))
 
