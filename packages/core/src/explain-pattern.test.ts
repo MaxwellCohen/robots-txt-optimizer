@@ -34,4 +34,9 @@ describe('explainOtherDirective', () => {
   it('explains crawl-delay', () => {
     expect(explainOtherDirective('Crawl-delay', '10')).toContain('10 second')
   })
+
+  it('explains Content-Signal', () => {
+    expect(explainOtherDirective('Content-Signal', 'search=yes, ai-train=no'))
+      .toContain('Content usage preferences')
+  })
 })

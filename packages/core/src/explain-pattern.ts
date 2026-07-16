@@ -64,5 +64,9 @@ export function explainOtherDirective(name: string, value: string): string {
     return `Preferred mirror host: ${value} (non-standard; Yandex-specific)`
   }
 
+  if (normalized === 'contentsignal') {
+    return `Content usage preferences: ${value} (non-standard; Content Signals / Cloudflare)`
+  }
+
   return `Non-standard directive`
 }

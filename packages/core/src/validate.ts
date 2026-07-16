@@ -3,7 +3,7 @@ import { isUserAgentLineContent, stripComment } from './parse'
 import { textForLint, normalizeDirectiveName } from './robots-text'
 import type { RobotsDocument, ValidationIssue, ValidationResult } from './types'
 
-const NON_RFC_DIRECTIVES = new Set(['crawldelay', 'host'])
+const NON_RFC_DIRECTIVES = new Set(['crawldelay', 'host', 'contentsignal'])
 const MAX_LINE_LENGTH = 4096
 
 function isUnexpectedCharacterError(message: string): boolean {

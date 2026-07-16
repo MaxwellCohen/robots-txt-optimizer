@@ -227,6 +227,25 @@ Disallow: /private/`
     })
   })
 
+  it('recognizes Content-Signal as a known non-RFC directive', () => {
+    const text = `User-agent: *
+Content-Signal: search=yes, ai-train=no
+Allow: /`
+
+    const result = analyzeRobotsTxt(text)
+
+    expect(result.validation.issues).not.toContainEqual({
+      severity: 'warning',
+      message: 'Unrecognized or unparseable directive',
+      line: 2
+    })
+    expect(result.validation.issues).toContainEqual({
+      severity: 'warning',
+      message: 'Directive "Content-Signal" is recognized but not part of RFC 9309 (may be ignored by crawlers)',
+      line: 2
+    })
+  })
+
   it('removes redundant disallow rules after allow-list catch-all', () => {
     const text = `User-agent: *
 Allow: /$
