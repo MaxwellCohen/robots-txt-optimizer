@@ -7,6 +7,3 @@ allowBuilds:
   esbuild: false
   unrs-resolver: false
   vue-demi: false
-
-patchedDependencies:
-  nuxt@4.5.0: patches/nuxt@4.5.0.patch
