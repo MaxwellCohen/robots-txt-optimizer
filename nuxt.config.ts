@@ -84,6 +84,14 @@ export default defineNuxtConfig({
     }
   },
 
+  vite: {
+    optimizeDeps: {
+      include: [
+        '@vueuse/core'
+      ]
+    }
+  },
+
   eslint: {
     config: {
       stylistic: {
