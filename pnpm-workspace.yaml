@@ -1,6 +1,11 @@
 packages:
   - packages/*
 
+# pnpm 11 defaults this to 1440 minutes. This lockfile includes packages
+# published inside that window (nuxt 4.6.0, vite 8.3.3, and others), which
+# matches the local pnpm config and is what Vercel must use too.
+minimumReleaseAge: 120 # 2 hours
+
 allowBuilds:
   '@parcel/watcher': false
   '@tailwindcss/oxide': false
