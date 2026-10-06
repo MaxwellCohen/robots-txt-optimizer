@@ -12,21 +12,21 @@
     "test": "pnpm --filter @robots-txt-optimizer/core test"
   },
   "dependencies": {
-    "@iconify-json/lucide": "^1.2.118",
-    "@nuxt/ui": "^4.10.0",
+    "@iconify-json/lucide": "^1.2.140",
+    "@nuxt/ui": "^4.11.3",
     "@robots-txt-optimizer/core": "workspace:*",
-    "@vueuse/core": "^14.3.0",
-    "nuxt": "^4.5.0",
+    "@vueuse/core": "^15.0.0",
+    "nuxt": "^4.6.0",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
-    "@nuxt/eslint": "^1.16.0",
-    "@nuxt/test-utils": "^4.0.3",
-    "@types/node": "^25.9.5",
-    "eslint": "^10.7.0",
+    "@nuxt/eslint": "^1.17.0",
+    "@nuxt/test-utils": "^4.3.3",
+    "@types/node": "^26.6.4",
+    "eslint": "^10.12.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10",
-    "vue-tsc": "^3.3.7"
+    "vitest": "^5.0.3",
+    "vue-tsc": "^3.3.12"
   },
   "packageManager": "pnpm@11.5.2"
 }

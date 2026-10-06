@@ -31,15 +31,16 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    // Prebuilt at deploy; CDN caches 24h with week-long stale-while-revalidate.
+    // ISG (Incremental Static Generation) via Vercel ISR.
+    // Shell streams immediately; page regenerates in background after expiration.
     '/': {
-      prerender: true,
+      isr: { expiration: 86400 }, // 24h revalidation window
       headers: {
         'Cache-Control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
       }
     },
     '/about': {
-      prerender: true,
+      isr: { expiration: 86400 },
       headers: {
         'Cache-Control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
       }
@@ -72,11 +73,11 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-01-15',
 
   nitro: {
-    // Hybrid: prerender pages (routeRules above) but deploy /api/** as Vercel serverless functions.
+    // Hybrid: ISG pages (/, /about) via Vercel ISR; static files (/robots.txt, /llms.txt) prerendered; /api/** as Vercel serverless functions.
     preset: 'vercel',
     prerender: {
       crawlLinks: true,
-      routes: ['/', '/about', '/robots.txt', '/llms.txt']
+      routes: ['/robots.txt', '/llms.txt']
     },
     compressPublicAssets: {
       gzip: true,
