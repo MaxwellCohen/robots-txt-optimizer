@@ -31,65 +31,63 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    // ISG (Incremental Static Generation) via Vercel ISR.
-    // Shell streams immediately; page regenerates in background after expiration.
+    // Prerender at build so CDN has HTML immediately (sub-1s FCP).
+    // ISR regenerates in the background after the revalidation window.
     '/': {
-      isr: { expiration: 86400 }, // 24h revalidation window
-      headers: {
-        'Cache-Control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
-      }
+      prerender: true,
+      isr: 86400
     },
     '/about': {
-      isr: { expiration: 86400 },
-      headers: {
-        'Cache-Control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
-      }
+      prerender: true,
+      isr: 86400
     },
     '/robots.txt': {
-      prerender: true,
-      headers: {
-        'Cache-Control': 'public, max-age=3600, s-maxage=86400'
-      }
+      prerender: true
     },
     '/llms.txt': {
-      prerender: true,
-      headers: {
-        'Cache-Control': 'public, max-age=3600, s-maxage=86400'
-      }
+      prerender: true
     },
     '/_nuxt/**': {
       headers: {
         'Cache-Control': 'public, max-age=31536000, immutable'
       }
     },
-    '/api/**': { prerender: false }
+    '/api/**': {
+      isr: false
+    }
+  },
+
+  future: {
+    compatibilityVersion: 5
+  },
+
+  features: {
+    inlineStyles: true
   },
 
   experimental: {
-    // Smaller prerendered HTML; state ships in a separate cacheable JSON payload.
+    // https://nuxt.com/blog/v4-5#%EF%B8%8F-forwarded-preload-hints-on-prefetch
+    prefetchPreloadTags: true,
+    early404: true,
+    // Smaller HTML; state ships in a separate cacheable JSON payload.
     payloadExtraction: true
   },
 
-  compatibilityDate: '2025-01-15',
+  compatibilityDate: '2026-09-01',
 
   nitro: {
-    // Hybrid: ISG pages (/, /about) via Vercel ISR; static files (/robots.txt, /llms.txt) prerendered; /api/** as Vercel serverless functions.
+    future: {
+      // Prefer explicit `isr` route rules on Vercel (no legacy swr/static mapping).
+      nativeSWR: true
+    },
     preset: 'vercel',
     prerender: {
       crawlLinks: true,
-      routes: ['/robots.txt', '/llms.txt']
+      routes: ['/', '/about', '/robots.txt', '/llms.txt']
     },
     compressPublicAssets: {
       gzip: true,
       brotli: true
-    }
-  },
-
-  vite: {
-    optimizeDeps: {
-      include: [
-        '@vueuse/core'
-      ]
     }
   },
 
@@ -107,5 +105,5 @@ export default defineNuxtConfig({
       scan: true,
       sizeLimitKb: 64
     }
-  }
+  },
 })
