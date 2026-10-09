@@ -35,11 +35,11 @@ export default defineNuxtConfig({
     // ISR regenerates in the background after the revalidation window.
     '/': {
       prerender: true,
-      isr: 86400
+      isr: 1209600
     },
     '/about': {
       prerender: true,
-      isr: 86400
+      isr: 1209600
     },
     '/robots.txt': {
       prerender: true
