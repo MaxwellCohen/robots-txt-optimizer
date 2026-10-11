@@ -4,6 +4,7 @@ import {
   RobotsUrlError
 } from '@robots-txt-optimizer/core/fetch'
 import { secureFetchRobotsTxt } from '@robots-txt-optimizer/core/node'
+import { createError, defineEventHandler, getQuery } from 'nuxt/server'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
