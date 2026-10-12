@@ -6,6 +6,31 @@ packages:
 # matches the local pnpm config and is what Vercel must use too.
 minimumReleaseAge: 120 # 2 hours
 
+# @nuxt/ui@4.11.3 depends on TipTap ^3.31.3, but the lockfile had resolved
+# @tiptap/core (and several siblings) to 3.24.0 while starter-kit extensions
+# resolved to 3.31.4. That mix breaks Vite: extension-list imports
+# getPreviousBlockSibling, which 3.24.0 does not export.
+overrides:
+  "@tiptap/core": "3.31.4"
+  "@tiptap/pm": "3.31.4"
+  "@tiptap/starter-kit": "3.31.4"
+  "@tiptap/vue-3": "3.31.4"
+  "@tiptap/markdown": "3.31.4"
+  "@tiptap/suggestion": "3.31.4"
+  "@tiptap/extensions": "3.31.4"
+  "@tiptap/extension-bubble-menu": "3.31.4"
+  "@tiptap/extension-code": "3.31.4"
+  "@tiptap/extension-collaboration": "3.31.4"
+  "@tiptap/extension-drag-handle": "3.31.4"
+  "@tiptap/extension-drag-handle-vue-3": "3.31.4"
+  "@tiptap/extension-floating-menu": "3.31.4"
+  "@tiptap/extension-horizontal-rule": "3.31.4"
+  "@tiptap/extension-image": "3.31.4"
+  "@tiptap/extension-mention": "3.31.4"
+  "@tiptap/extension-node-range": "3.31.4"
+  "@tiptap/extension-placeholder": "3.31.4"
+  "@tiptap/y-tiptap": "3.0.9"
+
 allowBuilds:
   '@parcel/watcher': false
   '@tailwindcss/oxide': false

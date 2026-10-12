@@ -1,12 +1,13 @@
 <script setup lang="ts">
+import { useRoute, useRouter } from '#app'
 import {
   defaultSimulationConfig,
   type SimulationConfig
 } from '@robots-txt-optimizer/core/simulation-config'
-
-const RobotsResults = defineAsyncComponent(
-  () => import('~/components/robots/RobotsResults.vue')
-)
+import { useRobotsAnalysis } from '~/composables/useRobotsAnalysis'
+import { useRobotsFetch } from '~/composables/useRobotsFetch'
+import { useRobotsTextUrl } from '~/composables/useRobotsTextUrl'
+import { useSimulationUrl } from '~/composables/useSimulationUrl'
 
 const route = useRoute()
 const router = useRouter()
