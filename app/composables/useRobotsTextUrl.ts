@@ -11,6 +11,7 @@ type ShareContext = {
 export function useRobotsTextUrl() {
   const route = useRoute()
   const router = useRouter()
+  const textWrittenToQuery = ref<string | null>(null)
 
   const textFromQuery = computed(() => {
     const value = route.query[ROBOTS_TEXT_QUERY_KEY]
@@ -57,6 +58,7 @@ export function useRobotsTextUrl() {
       return
     }
 
+    textWrittenToQuery.value = encoded
     const { url: _, ...rest } = route.query
     await router.replace({
       query: {
@@ -68,6 +70,7 @@ export function useRobotsTextUrl() {
 
   return {
     textFromQuery,
+    textWrittenToQuery,
     decodeTextFromQuery,
     debouncedSyncTextToUrl
   }

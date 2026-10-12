@@ -6,7 +6,7 @@ import type {
 } from './types'
 import { isUserAgentLineContent, parseRobotsTxt } from './parse'
 import { DEFAULT_PATHS } from './paths'
-import { checkRobotsPath } from './match'
+import { compilePathRule, matchCompiledPathRules, type CompiledPathRule } from './match'
 
 function directiveKey(d: Directive): string {
   return `${d.type}:${d.value}`
@@ -124,37 +124,6 @@ function findRedundantCatchall(doc: RobotsDocument): OptimizationSuggestion[] {
   }]
 }
 
-interface GroupTextBuild {
-  text: string
-  lineToDirective: Map<number, Directive>
-}
-
-function buildGroupTextForAgent(
-  group: UserAgentGroup,
-  agent: string,
-  excludeDirectiveIndex?: number
-): GroupTextBuild {
-  const lines: string[] = [`User-agent: ${agent}`]
-  const lineToDirective = new Map<number, Directive>()
-  let lineNum = 1
-
-  for (let i = 0; i < group.directives.length; i++) {
-    if (i === excludeDirectiveIndex) {
-      continue
-    }
-    const d = group.directives[i]!
-    if (d.type !== 'allow' && d.type !== 'disallow') {
-      continue
-    }
-    lineNum++
-    const label = d.type === 'allow' ? 'Allow' : 'Disallow'
-    lines.push(`${label}: ${d.value}`)
-    lineToDirective.set(lineNum, d)
-  }
-
-  return { text: lines.join('\n'), lineToDirective }
-}
-
 function pathsFromPattern(pattern: string): string[] {
   if (!pattern) {
     return []
@@ -196,60 +165,42 @@ function formatUserAgentList(agents: string[]): string {
   return agents.map(agent => `\`${agent}\``).join(', ')
 }
 
-function isRuleDeadForAgent(
-  group: UserAgentGroup,
-  agent: string,
-  directiveIndex: number,
+function ruleChangesOutcome(
+  rules: readonly CompiledPathRule[],
+  ruleIndex: number,
   probePaths: readonly string[]
 ): boolean {
-  const { text: withoutText } = buildGroupTextForAgent(group, agent, directiveIndex)
-  const { text: withText } = buildGroupTextForAgent(group, agent)
   for (const path of probePaths) {
-    if (
-      checkRobotsPath(withoutText, agent, path).allowed
-      !== checkRobotsPath(withText, agent, path).allowed
-    ) {
-      return false
+    const withRule = matchCompiledPathRules(path, rules)
+    const withoutRule = matchCompiledPathRules(path, rules, ruleIndex)
+    if (withRule.allowed !== withoutRule.allowed) {
+      return true
     }
   }
 
-  return true
+  return false
 }
 
-function findSupersedingDirective(
-  group: UserAgentGroup,
+function supersedingDirective(
   pathDirectives: Array<{ d: Directive, index: number }>,
-  deadRuleIndex: number,
-  agent: string,
-  _probePaths: readonly string[]
+  rules: readonly CompiledPathRule[],
+  deadRuleIndex: number
 ): Directive | null {
-  if (deadRuleIndex <= 0) {
-    return null
-  }
-
   const deadEntry = pathDirectives[deadRuleIndex]!
-  for (let j = 0; j < deadRuleIndex; j++) {
-    if (directiveKey(pathDirectives[j]!.d) === directiveKey(deadEntry.d)) {
-      return pathDirectives[j]!.d
+  for (let index = 0; index < deadRuleIndex; index++) {
+    if (directiveKey(pathDirectives[index]!.d) === directiveKey(deadEntry.d)) {
+      return pathDirectives[index]!.d
     }
   }
-
-  const { text: withoutDeadText, lineToDirective } = buildGroupTextForAgent(
-    group,
-    agent,
-    deadEntry.index
-  )
-  const relevantPaths = pathsFromPattern(deadEntry.d.value)
 
   let earliest: Directive | null = null
-
-  for (const path of relevantPaths) {
-    const result = checkRobotsPath(withoutDeadText, agent, path)
-    if (!result.matchingLine) {
+  for (const path of pathsFromPattern(deadEntry.d.value)) {
+    const result = matchCompiledPathRules(path, rules, deadRuleIndex)
+    if (result.ruleIndex < 0) {
       continue
     }
-    const winner = lineToDirective.get(result.matchingLine)
-    if (winner && (earliest === null || winner.line < earliest.line)) {
+    const winner = pathDirectives[result.ruleIndex]!.d
+    if (earliest === null || winner.line < earliest.line) {
       earliest = winner
     }
   }
@@ -263,51 +214,38 @@ function findDeadRules(doc: RobotsDocument): OptimizationSuggestion[] {
 
   for (let gi = 0; gi < doc.groups.length; gi++) {
     const group = doc.groups[gi]!
-    const pathDirectives = group.directives
-      .map((d, index) => ({ d, index }))
-      .filter(({ d }) => d.type === 'allow' || d.type === 'disallow')
-
+    const pathDirectives: Array<{ d: Directive, index: number }> = []
+    for (let index = 0; index < group.directives.length; index++) {
+      const directive = group.directives[index]!
+      if (directive.type === 'allow' || directive.type === 'disallow') {
+        pathDirectives.push({ d: directive, index })
+      }
+    }
+    const compiled = pathDirectives.map(({ d }) => compilePathRule(
+      d.type === 'allow' ? 'allow' : 'disallow',
+      d.value
+    ))
     const agents = group.userAgents.length > 0 ? group.userAgents : ['*']
 
     for (let ri = 1; ri < pathDirectives.length; ri++) {
-      const { d: directive, index: directiveIndex } = pathDirectives[ri]!
+      const directive = pathDirectives[ri]!.d
       const probePaths = probePathsForDirective(directive.value, baseProbePaths)
-      const deadBySuperseder = new Map<string, { agents: string[], supersededBy: string }>()
-
-      for (const agent of agents) {
-        if (!isRuleDeadForAgent(group, agent, directiveIndex, probePaths)) {
-          continue
-        }
-
-        const superseding = findSupersedingDirective(
-          group,
-          pathDirectives,
-          ri,
-          agent,
-          probePaths
-        )
-        const supersededBy = superseding
-          ? formatPathDirective(superseding)
-          : 'an earlier rule'
-        const key = supersededBy
-        const existing = deadBySuperseder.get(key)
-        if (existing) {
-          existing.agents.push(agent)
-        } else {
-          deadBySuperseder.set(key, { agents: [agent], supersededBy })
-        }
+      if (ruleChangesOutcome(compiled, ri, probePaths)) {
+        continue
       }
 
-      for (const { agents: deadAgents, supersededBy } of deadBySuperseder.values()) {
-        const ruleLabel = directive.type === 'allow' ? 'Allow' : 'Disallow'
-        suggestions.push({
-          type: 'dead_rule',
-          message: `${ruleLabel} "${directive.value}" never changes crawl outcome for ${formatUserAgentList(deadAgents)} (superseded by ${supersededBy})`,
-          lines: [directive.line],
-          groupIndex: gi,
-          userAgents: deadAgents
-        })
-      }
+      const superseding = supersedingDirective(pathDirectives, compiled, ri)
+      const supersededBy = superseding
+        ? formatPathDirective(superseding)
+        : 'an earlier rule'
+      const ruleLabel = directive.type === 'allow' ? 'Allow' : 'Disallow'
+      suggestions.push({
+        type: 'dead_rule',
+        message: `${ruleLabel} "${directive.value}" never changes crawl outcome for ${formatUserAgentList(agents)} (superseded by ${supersededBy})`,
+        lines: [directive.line],
+        groupIndex: gi,
+        userAgents: [...agents]
+      })
     }
   }
 

@@ -13,7 +13,7 @@ const route = useRoute()
 const router = useRouter()
 const { loading, error, fetchRobotsTxt } = useRobotsFetch()
 const { analysis, analyzing, runAnalysis, debouncedAnalyze } = useRobotsAnalysis()
-const { textFromQuery, decodeTextFromQuery, debouncedSyncTextToUrl } = useRobotsTextUrl()
+const { textFromQuery, textWrittenToQuery, decodeTextFromQuery, debouncedSyncTextToUrl } = useRobotsTextUrl()
 const { simulationFromQuery, decodeSimulationFromQuery, debouncedSyncSimulationToUrl } = useSimulationUrl()
 
 const simulationConfig = ref<SimulationConfig>(defaultSimulationConfig())
@@ -55,6 +55,12 @@ async function onAnalyzeUrl(url: string) {
 }
 
 function onAnalyzeText(text: string) {
+  if (fetchedText.value != null && text !== fetchedText.value) {
+    loadedUrl.value = null
+    shareUrl.value = null
+    fetchedText.value = null
+  }
+
   debouncedAnalyze(text)
   debouncedSyncTextToUrl(text, {
     shareUrl: shareUrl.value,
@@ -104,9 +110,10 @@ watch(urlFromQuery, (url, previous) => {
 })
 
 watch(textFromQuery, (encoded, previous) => {
-  if (encoded && encoded !== previous) {
-    loadTextFromQuery(encoded)
+  if (!encoded || encoded === previous || encoded === textWrittenToQuery.value) {
+    return
   }
+  loadTextFromQuery(encoded)
 })
 
 watch(simulationFromQuery, (encoded, previous) => {

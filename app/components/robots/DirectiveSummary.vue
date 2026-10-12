@@ -33,13 +33,36 @@ const columns = [
   { accessorKey: 'other', header: 'Other', ...wrapCell }
 ]
 
+const largeRuleList = 30
+
+function formatRuleBlock(
+  patterns: string[],
+  effect: 'allow' | 'disallow',
+  allowPatterns: string[] = []
+): string {
+  return patterns.map((pattern) => {
+    const explanation = explainPattern(
+      pattern,
+      effect,
+      effect === 'disallow' ? { allowPatterns } : undefined
+    )
+    return `${pattern} — ${explanation}`
+  }).join('\n')
+}
+
 const tableData = computed(() =>
   props.rows.map(row => ({
     userAgents: row.userAgents.length > 0 ? row.userAgents : [],
     allow: row.allow,
     disallow: row.disallow,
     other: row.other,
-    startLine: row.startLine
+    startLine: row.startLine,
+    allowText: row.allow.length > largeRuleList
+      ? formatRuleBlock(row.allow, 'allow')
+      : '',
+    disallowText: row.disallow.length > largeRuleList
+      ? formatRuleBlock(row.disallow, 'disallow', row.allow)
+      : ''
   }))
 )
 </script>
@@ -109,8 +132,12 @@ const tableData = computed(() =>
             </template>
 
             <template #allow-cell="{ row }">
+              <pre
+                v-if="row.original.allowText"
+                class="max-h-80 overflow-auto whitespace-pre-wrap font-mono text-xs leading-5"
+              >{{ row.original.allowText }}</pre>
               <ul
-                v-if="row.original.allow.length > 0"
+                v-else-if="row.original.allow.length > 0"
                 class="space-y-3"
               >
                 <li
@@ -130,8 +157,12 @@ const tableData = computed(() =>
             </template>
 
             <template #disallow-cell="{ row }">
+              <pre
+                v-if="row.original.disallowText"
+                class="max-h-80 overflow-auto whitespace-pre-wrap font-mono text-xs leading-5"
+              >{{ row.original.disallowText }}</pre>
               <ul
-                v-if="row.original.disallow.length > 0"
+                v-else-if="row.original.disallow.length > 0"
                 class="space-y-3"
               >
                 <li

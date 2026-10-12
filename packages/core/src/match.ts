@@ -52,40 +52,86 @@ function getApplicableRules(robotRules: RobotRule[], userAgent: string): Rule[] 
   return rules
 }
 
-function matchRules(path: string, rules: Rule[]): { allowed: boolean, rule: Rule | null, ruleIndex: number } {
+export interface CompiledPathRule {
+  type: 'ALLOW' | 'DISALLOW'
+  path: string
+  regex: RegExp
+}
+
+export function compilePathRule(type: 'allow' | 'disallow', path: string): CompiledPathRule {
+  const decoded = safeDecodePath(path)
+  return {
+    type: type === 'allow' ? 'ALLOW' : 'DISALLOW',
+    path: decoded,
+    regex: toRegExpPath(decoded)
+  }
+}
+
+function safeDecodePath(path: string): string {
+  try {
+    return decodePath(path)
+  } catch {
+    return path
+  }
+}
+
+export function matchCompiledPathRules(
+  path: string,
+  rules: readonly CompiledPathRule[],
+  excludeIndex = -1
+): { allowed: boolean, ruleIndex: number } {
   if (path === '/robots.txt') {
-    return { allowed: true, rule: null, ruleIndex: -1 }
+    return { allowed: true, ruleIndex: -1 }
   }
 
-  const decoded = decodePath(path)
-  const matches: Array<{ rule: Rule, index: number }> = []
+  const decoded = safeDecodePath(path)
+  const matches: Array<{ rule: CompiledPathRule, index: number }> = []
 
   for (let index = 0; index < rules.length; index++) {
+    if (index === excludeIndex) {
+      continue
+    }
     const rule = rules[index]!
-    if (toRegExpPath(rule.path).test(decoded)) {
+    if (rule.regex.test(decoded)) {
       matches.push({ rule, index })
     }
   }
 
   if (matches.length === 0) {
-    return { allowed: true, rule: null, ruleIndex: -1 }
+    return { allowed: true, ruleIndex: -1 }
   }
 
-  const sorted = matches.sort((a, b) => {
-    const al = a.rule.path.split('/').length
-    const bl = b.rule.path.split('/').length
-
-    if (al === bl) {
-      return a.rule.path.length > b.rule.path.length ? -1 : 1
-    }
-    return al > bl ? -1 : 1
-  })
-
-  const winner = sorted[0]!
+  const winner = matches.sort(bySpecificity)[0]!
   return {
     allowed: winner.rule.type === 'ALLOW',
-    rule: winner.rule,
     ruleIndex: winner.index
+  }
+}
+
+function bySpecificity(
+  a: { rule: { path: string } },
+  b: { rule: { path: string } }
+): number {
+  const al = a.rule.path.split('/').length
+  const bl = b.rule.path.split('/').length
+
+  if (al === bl) {
+    return a.rule.path.length > b.rule.path.length ? -1 : 1
+  }
+  return al > bl ? -1 : 1
+}
+
+function matchRules(path: string, rules: Rule[]): { allowed: boolean, rule: Rule | null, ruleIndex: number } {
+  const compiled: CompiledPathRule[] = rules.map(rule => ({
+    type: rule.type === 'ALLOW' ? 'ALLOW' : 'DISALLOW',
+    path: rule.path,
+    regex: toRegExpPath(rule.path)
+  }))
+  const { allowed, ruleIndex } = matchCompiledPathRules(path, compiled)
+  return {
+    allowed,
+    rule: ruleIndex >= 0 ? rules[ruleIndex]! : null,
+    ruleIndex
   }
 }
 

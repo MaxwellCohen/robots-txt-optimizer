@@ -23,6 +23,18 @@ describe('parseRobotsTxt', () => {
 })
 
 describe('analyzeRobotsTxt', () => {
+  it('keeps user-agents that share rules on one summary row', () => {
+    const text = `User-agent: Googlebot
+User-agent: Bingbot
+Disallow: /admin`
+
+    const result = analyzeRobotsTxt(text)
+
+    expect(result.directiveSummary).toHaveLength(1)
+    expect(result.directiveSummary[0]?.userAgents).toEqual(['Googlebot', 'Bingbot'])
+    expect(result.directiveSummary[0]?.disallow).toEqual(['/admin'])
+  })
+
   it('validates a well-formed robots.txt', () => {
     const result = analyzeRobotsTxt(loadFixture('sample.txt'))
 
@@ -311,5 +323,25 @@ Disallow: /`
     expect(result.optimizedText).toContain('Disallow: /')
     expect(result.optimizedText).toContain('User-agent: GPTBot')
     expect(result.optimizedText).toContain('User-agent: ChatGPT-User')
+  })
+
+  it('analyzes a Google-sized robots.txt quickly', () => {
+    const text = loadFixture('google-robots.txt')
+    const expected = JSON.parse(loadFixture('google-dead-rules.json')) as Array<{
+      lines: number[]
+      userAgents: string[]
+      message: string
+    }>
+
+    const start = performance.now()
+    const result = analyzeRobotsTxt(text)
+    const elapsed = performance.now() - start
+
+    expect(elapsed).toBeLessThan(500)
+    expect(result.suggestions.filter(suggestion => suggestion.type === 'dead_rule').map(suggestion => ({
+      lines: suggestion.lines,
+      userAgents: suggestion.userAgents,
+      message: suggestion.message
+    }))).toEqual(expected)
   })
 })
