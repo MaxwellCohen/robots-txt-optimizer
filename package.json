@@ -16,7 +16,7 @@
     "@nuxt/ui": "^4.11.3",
     "@robots-txt-optimizer/core": "workspace:*",
     "@vueuse/core": "^15.0.0",
-    "nuxt": "^4.6.0",
+    "nuxt": "^4.6.1",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
