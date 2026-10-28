@@ -1,53 +1,13 @@
 [
   {
     "lines": [
-      12
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/?hl=*&\" never changes crawl outcome for `*`, `Yandex` (superseded by Allow: /?hl=)"
-  },
-  {
-    "lines": [
-      13
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Allow \"/?hl=*&gws_rd=ssl$\" never changes crawl outcome for `*`, `Yandex` (superseded by Allow: /?hl=)"
-  },
-  {
-    "lines": [
-      14
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/?hl=*&*&gws_rd=ssl\" never changes crawl outcome for `*`, `Yandex` (superseded by Allow: /?hl=)"
-  },
-  {
-    "lines": [
       47
     ],
     "userAgents": [
       "*",
       "Yandex"
     ],
-    "message": "Disallow \"/bkshp?*dq=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      48
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/bkshp?*q=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
+    "message": "Disallow \"/bkshp?*dq=\" never changes crawl outcome for `*`, `Yandex` (superseded by Disallow: /bkshp?*q=)"
   },
   {
     "lines": [
@@ -57,147 +17,7 @@
       "*",
       "Yandex"
     ],
-    "message": "Disallow \"/books?*dq=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      50
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/books?*q=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      51
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/books?*qtid=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      52
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/books?*output=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      53
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/books?*pg=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      54
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/books?*jtp=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      55
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/books?*jscmd=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      56
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/books?*buy=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      57
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/books?*zoom=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      59
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Allow \"/books?*zoom=1\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      60
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Allow \"/books?*zoom=5\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      61
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Allow \"/books/content?*zoom=1\" never changes crawl outcome for `*`, `Yandex` (superseded by Disallow: /books/)"
-  },
-  {
-    "lines": [
-      62
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Allow \"/books/content?*zoom=5\" never changes crawl outcome for `*`, `Yandex` (superseded by Disallow: /books/)"
-  },
-  {
-    "lines": [
-      82
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Allow \"/maps?*output=classic\" never changes crawl outcome for `*`, `Yandex` (superseded by Disallow: /maps?)"
-  },
-  {
-    "lines": [
-      83
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Allow \"/maps?*file=\" never changes crawl outcome for `*`, `Yandex` (superseded by Disallow: /maps?)"
+    "message": "Disallow \"/books?*dq=\" never changes crawl outcome for `*`, `Yandex` (superseded by Disallow: /books?*q=)"
   },
   {
     "lines": [
@@ -208,36 +28,6 @@
       "Yandex"
     ],
     "message": "Allow \"/maps/reserve\" never changes crawl outcome for `*`, `Yandex` (superseded by Allow: /maps/reserve)"
-  },
-  {
-    "lines": [
-      109
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Allow \"/search?*tbm=map\" never changes crawl outcome for `*`, `Yandex` (superseded by Disallow: /search)"
-  },
-  {
-    "lines": [
-      204
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/about/careers/applications/jobs/results?*&page=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
-  },
-  {
-    "lines": [
-      205
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Disallow \"/about/careers/applications/jobs/results/?*&page=\" never changes crawl outcome for `*`, `Yandex` (superseded by an earlier rule)"
   },
   {
     "lines": [

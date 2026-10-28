@@ -22,14 +22,22 @@ const DEFAULT_MATCH: PathMatchResult = {
   matchingLine: 0
 }
 
+/**
+ * Compiles an RFC 9309 path pattern: `*` matches any sequence of characters
+ * and a trailing `$` anchors the match to the end of the URL path.
+ */
 function toRegExpPath(path: string): RegExp {
-  const target = path
-    .replace(/\?/g, '\\?')
-    .split('/')
-    .map((segment: string) => (segment === '*' ? '.*' : segment))
-    .join('/')
-  const suffix = target.slice(-1) === '/' ? '.*' : ''
-  return new RegExp(`^${target}${suffix}`)
+  if (!path) {
+    // An empty Allow/Disallow value matches nothing.
+    return /(?!)/
+  }
+  const anchored = path.endsWith('$')
+  const body = anchored ? path.slice(0, -1) : path
+  const source = body
+    .split('*')
+    .map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+    .join('.*')
+  return new RegExp(`^${source}${anchored ? '$' : ''}`)
 }
 
 function isStarUserAgent(agent: string): boolean {
@@ -108,17 +116,21 @@ export function matchCompiledPathRules(
   }
 }
 
+/**
+ * RFC 9309: the most specific (longest) matching pattern wins; when an allow
+ * and a disallow pattern are equally specific, allow wins.
+ */
 function bySpecificity(
-  a: { rule: { path: string } },
-  b: { rule: { path: string } }
+  a: { rule: { path: string, type: 'ALLOW' | 'DISALLOW' } },
+  b: { rule: { path: string, type: 'ALLOW' | 'DISALLOW' } }
 ): number {
-  const al = a.rule.path.split('/').length
-  const bl = b.rule.path.split('/').length
-
-  if (al === bl) {
-    return a.rule.path.length > b.rule.path.length ? -1 : 1
+  if (a.rule.path.length !== b.rule.path.length) {
+    return b.rule.path.length - a.rule.path.length
   }
-  return al > bl ? -1 : 1
+  if (a.rule.type !== b.rule.type) {
+    return a.rule.type === 'ALLOW' ? -1 : 1
+  }
+  return 0
 }
 
 function matchRules(path: string, rules: Rule[]): { allowed: boolean, rule: Rule | null, ruleIndex: number } {
