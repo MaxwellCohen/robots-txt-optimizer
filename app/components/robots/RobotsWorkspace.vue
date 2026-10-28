@@ -6,12 +6,14 @@ import {
 } from '@robots-txt-optimizer/core/simulation-config'
 import { useRobotsAnalysis } from '~/composables/useRobotsAnalysis'
 import { useRobotsFetch } from '~/composables/useRobotsFetch'
+import { useRobotsSnapshots, type RobotsSnapshot } from '~/composables/useRobotsSnapshots'
 import { useRobotsTextUrl } from '~/composables/useRobotsTextUrl'
 import { useSimulationUrl } from '~/composables/useSimulationUrl'
 
 const route = useRoute()
 const router = useRouter()
-const { loading, error, fetchRobotsTxt } = useRobotsFetch()
+const { loading, error, lastResult, lastRequestedUrl, fetchRobotsTxt } = useRobotsFetch()
+const { recordSnapshot } = useRobotsSnapshots()
 const { analysis, analyzing, runAnalysis, debouncedAnalyze } = useRobotsAnalysis()
 const { textFromQuery, textWrittenToQuery, decodeTextFromQuery, debouncedSyncTextToUrl } = useRobotsTextUrl()
 const { simulationFromQuery, decodeSimulationFromQuery, debouncedSyncSimulationToUrl } = useSimulationUrl()
@@ -24,6 +26,7 @@ const loadedUrl = ref<string | null>(null)
 const fetchedText = ref<string | null>(null)
 const shareUrl = ref<string | null>(null)
 const initialPastedText = ref('')
+const previousSnapshot = ref<RobotsSnapshot | null>(null)
 
 const urlFromQuery = computed(() => {
   const queryUrl = route.query.url
@@ -37,6 +40,7 @@ async function analyzeUrl(url: string, updateQuery = true) {
   }
 
   const result = await fetchRobotsTxt(url)
+  previousSnapshot.value = result ? recordSnapshot(result.finalUrl, result.text) : null
   if (result) {
     loadedUrl.value = result.finalUrl
     fetchedText.value = result.text
@@ -66,6 +70,12 @@ function onAnalyzeText(text: string) {
     shareUrl: shareUrl.value,
     fetchedText: fetchedText.value
   })
+}
+
+function onApplyText(text: string) {
+  // RobotsInput only reacts to prop changes, so reset first in case the value repeats.
+  initialPastedText.value = ''
+  initialPastedText.value = text
 }
 
 async function loadTextFromQuery(encoded: string) {
@@ -141,11 +151,25 @@ watch(simulationConfig, (config) => {
       @analyze-text="onAnalyzeText"
     />
 
+    <RobotsChangeBanner
+      v-if="previousSnapshot && fetchedText"
+      :previous="previousSnapshot"
+      :current="fetchedText"
+      @dismiss="previousSnapshot = null"
+    />
+
+    <RobotsFetchDiagnostics
+      v-if="lastResult"
+      :result="lastResult"
+      :requested-url="lastRequestedUrl"
+    />
+
     <RobotsResults
       v-if="hasResults && analysis"
       :analysis="analysis"
       :simulation-config="simulationConfig"
       @update:simulation-config="simulationConfig = $event"
+      @apply-text="onApplyText"
     />
   </div>
 </template>

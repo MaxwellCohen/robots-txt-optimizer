@@ -1,7 +1,6 @@
 import { analyzeCrawlerAccess, type CrawlerAccessStatus, type KnownCrawler } from './crawlers'
 import { diffLines, type DiffLine } from './diff'
 import { checkRobotsPath } from './match'
-import { pathsFromPattern } from './optimize'
 import { parseRobotsTxt } from './parse'
 import { DEFAULT_PATHS, DEFAULT_USER_AGENTS } from './paths'
 import type { RobotsDocument } from './types'
@@ -40,10 +39,20 @@ function namedAgents(doc: RobotsDocument): string[] {
   return doc.groups.flatMap(group => group.userAgents).filter(agent => agent.trim())
 }
 
+/** A readable concrete path that a rule pattern matches, e.g. `/*.pdf$` → `/x.pdf`. */
+export function samplePathForPattern(pattern: string): string | null {
+  const concrete = pattern.replace(/\$$/, '').replace(/\*+/g, 'x')
+  if (!concrete) {
+    return null
+  }
+  return concrete.startsWith('/') ? concrete : `/${concrete}`
+}
+
 function probePaths(doc: RobotsDocument): string[] {
   return doc.groups.flatMap(group => group.directives)
     .filter(directive => directive.type === 'allow' || directive.type === 'disallow')
-    .flatMap(directive => pathsFromPattern(directive.value))
+    .map(directive => samplePathForPattern(directive.value))
+    .filter((path): path is string => path !== null)
 }
 
 /** Compares two robots.txt files: text diff plus which crawl verdicts changed. */

@@ -69,6 +69,8 @@ Sitemap: https://example.com/sitemap.xml`
     expect(checkRobotsPath(text, 'GPTBot', '/').allowed).toBe(false)
     expect(checkRobotsPath(text, 'CCBot', '/').allowed).toBe(false)
     expect(checkRobotsPath(text, 'OAI-SearchBot', '/').allowed).toBe(true)
+    // Allowed AI bots keep the catch-all's restrictions.
+    expect(checkRobotsPath(text, 'OAI-SearchBot', '/admin').allowed).toBe(false)
     expect(checkRobotsPath(text, 'Googlebot', '/private').allowed).toBe(false)
     expect(checkRobotsPath(text, 'Googlebot', '/admin').allowed).toBe(true)
   })
@@ -78,6 +80,14 @@ Sitemap: https://example.com/sitemap.xml`
     const once = applyCrawlerPolicy(parseRobotsTxt(original), policy)
     const twice = applyCrawlerPolicy(parseRobotsTxt(once), policy)
     expect(twice).toBe(once)
+  })
+
+  it('lifts a site-wide catch-all block for allowed crawlers but keeps other rules', () => {
+    const doc = parseRobotsTxt('User-agent: *\nDisallow: /\nDisallow: /tmp')
+    const text = applyCrawlerPolicy(doc, { 'OAI-SearchBot': 'allow', 'Bingbot': 'allow' })
+    expect(checkRobotsPath(text, 'OAI-SearchBot', '/page').allowed).toBe(true)
+    expect(checkRobotsPath(text, 'OAI-SearchBot', '/tmp').allowed).toBe(false)
+    expect(checkRobotsPath(text, 'Googlebot', '/page').allowed).toBe(false)
   })
 })
 

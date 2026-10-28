@@ -9,6 +9,7 @@ import {
   parseRobotsTxt,
   parseSitemapXml
 } from './index'
+import { samplePathForPattern } from './compare'
 import { diagnoseFetch } from './fetch/diagnose'
 import { createGuardedFetch } from './fetch/node'
 import { RobotsFetchSecurityError } from './fetch/errors'
@@ -138,5 +139,14 @@ describe('getRobotsTemplates', () => {
       )
       expect(unexpected, template.id).toEqual([])
     }
+  })
+})
+
+describe('samplePathForPattern', () => {
+  it('builds readable paths from wildcard patterns', () => {
+    expect(samplePathForPattern('/*/*/data.json')).toBe('/x/x/data.json')
+    expect(samplePathForPattern('*/tarball/')).toBe('/x/tarball/')
+    expect(samplePathForPattern('/*.pdf$')).toBe('/x.pdf')
+    expect(samplePathForPattern('')).toBeNull()
   })
 })

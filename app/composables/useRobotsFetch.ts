@@ -29,6 +29,9 @@ export function useRobotsFetch() {
   const config = useRuntimeConfig()
   const loading = ref(false)
   const error = ref<FetchError | null>(null)
+  /** Last raw response (including non-2xx), for fetch diagnostics. */
+  const lastResult = ref<FetchResult | null>(null)
+  const lastRequestedUrl = ref<string | null>(null)
 
   async function fetchRobotsTxtFromInput(
     input: string,
@@ -36,9 +39,11 @@ export function useRobotsFetch() {
   ): Promise<FetchResult | null> {
     loading.value = true
     error.value = null
+    lastResult.value = null
 
     const { fetchRobotsTxt, normalizeRobotsUrl, validateFetchResult } = await loadFetchModule()
     const url = normalizeRobotsUrl(input)
+    lastRequestedUrl.value = url.toString()
     const tryClientFirst = options.tryClientFirst
       ?? config.public.robotsFetchClientFirst !== false
 
@@ -46,6 +51,7 @@ export function useRobotsFetch() {
       result: FetchResult,
       source: FetchResult['source']
     ): Promise<FetchResult | null> {
+      lastResult.value = result
       const validated = validateFetchResult(result)
       if (!validated && result.status !== 404) {
         error.value = {
@@ -91,6 +97,8 @@ export function useRobotsFetch() {
   return {
     loading: readonly(loading),
     error: readonly(error),
+    lastResult: readonly(lastResult),
+    lastRequestedUrl: readonly(lastRequestedUrl),
     fetchRobotsTxt: fetchRobotsTxtFromInput
   }
 }

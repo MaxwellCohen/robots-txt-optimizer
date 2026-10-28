@@ -41,6 +41,10 @@ export default defineNuxtConfig({
       prerender: true,
       isr: 1209600
     },
+    '/compare': {
+      prerender: true,
+      isr: 1209600
+    },
     '/robots.txt': {
       prerender: true
     },
@@ -83,7 +87,7 @@ export default defineNuxtConfig({
     preset: 'vercel',
     prerender: {
       crawlLinks: true,
-      routes: ['/', '/about', '/robots.txt', '/llms.txt']
+      routes: ['/', '/about', '/compare', '/robots.txt', '/llms.txt']
     },
     compressPublicAssets: {
       gzip: true,
