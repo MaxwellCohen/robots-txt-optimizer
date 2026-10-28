@@ -14,6 +14,7 @@ export type RobotsFetchSecurityErrorCode
   = | 'LOCAL_HOST'
     | 'PRIVATE_IP'
     | 'PRIVATE_DNS'
+    | 'UNSAFE_REDIRECT'
 
 export class RobotsFetchSecurityError extends Error {
   readonly code: RobotsFetchSecurityErrorCode
@@ -25,7 +26,7 @@ export class RobotsFetchSecurityError extends Error {
   }
 }
 
-export type RobotsFetchErrorCode = 'TIMEOUT' | 'TOO_LARGE'
+export type RobotsFetchErrorCode = 'TIMEOUT' | 'TOO_LARGE' | 'TOO_MANY_REDIRECTS'
 
 export class RobotsFetchError extends Error {
   readonly code: RobotsFetchErrorCode

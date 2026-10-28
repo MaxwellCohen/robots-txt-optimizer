@@ -124,7 +124,7 @@ function findRedundantCatchall(doc: RobotsDocument): OptimizationSuggestion[] {
   }]
 }
 
-function pathsFromPattern(pattern: string): string[] {
+export function pathsFromPattern(pattern: string): string[] {
   if (!pattern) {
     return []
   }

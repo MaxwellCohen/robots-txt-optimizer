@@ -64,3 +64,22 @@ export {
   type KnownCrawler
 } from './crawlers'
 export { collectCrawlabilityIssues, RENDER_RESOURCE_PATHS } from './checks'
+export { diffLines, diffStats, type DiffLine, type DiffLineType } from './diff'
+export {
+  compareRobotsTxt,
+  type CompareOptions,
+  type CrawlerStatusChange,
+  type RobotsComparison,
+  type VerdictChange
+} from './compare'
+export { getRobotsTemplates, type RobotsTemplate } from './templates'
+export {
+  findBlockedSitemapUrls,
+  parseSitemapXml,
+  SITEMAP_CHECK_AGENTS,
+  type ParsedSitemap,
+  type SitemapFetchEntry,
+  type SitemapKind,
+  type SitemapReport,
+  type SitemapUrlConflict
+} from './sitemap'
