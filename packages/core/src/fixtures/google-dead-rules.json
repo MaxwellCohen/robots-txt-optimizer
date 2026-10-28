@@ -21,26 +21,6 @@
   },
   {
     "lines": [
-      102
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Allow \"/maps/reserve\" never changes crawl outcome for `*`, `Yandex` (superseded by Allow: /maps/reserve)"
-  },
-  {
-    "lines": [
-      209
-    ],
-    "userAgents": [
-      "*",
-      "Yandex"
-    ],
-    "message": "Allow \"/maps/reserve\" never changes crawl outcome for `*`, `Yandex` (superseded by Allow: /maps/reserve)"
-  },
-  {
-    "lines": [
       210
     ],
     "userAgents": [

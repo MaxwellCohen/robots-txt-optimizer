@@ -648,14 +648,14 @@ function safeDecodePath(path) {
     return path;
   }
 }
-function matchCompiledPathRules(path, rules, excludeIndex = -1) {
+function matchCompiledPathRules(path, rules, exclude = -1) {
   if (path === "/robots.txt") {
     return { allowed: true, ruleIndex: -1 };
   }
   const decoded = safeDecodePath(path);
   const matches = [];
   for (let index = 0; index < rules.length; index++) {
-    if (index === excludeIndex) {
+    if (typeof exclude === "number" ? index === exclude : exclude.has(index)) {
       continue;
     }
     const rule = rules[index];
@@ -1416,8 +1416,56 @@ function pathsFromPattern(pattern) {
   }
   return [pattern, `${pattern}/probe`];
 }
-function probePathsForDirective(pattern, basePaths) {
-  return [.../* @__PURE__ */ new Set([...basePaths, ...pathsFromPattern(pattern)])];
+function concretize(pattern, fill) {
+  return pattern.replace(/\$$/, "").replace(/\*/g, fill);
+}
+function literalHead(pattern) {
+  return pattern.replace(/\$$/, "").split("*")[0];
+}
+function literalTail(pattern) {
+  const body = pattern.replace(/\$$/, "");
+  return body.includes("*") ? body.slice(body.lastIndexOf("*") + 1) : "";
+}
+function headsOverlap(a, b) {
+  const headA = literalHead(a);
+  const headB = literalHead(b);
+  return headA.startsWith(headB) || headB.startsWith(headA);
+}
+function probePathsForDirective(pattern, otherPatterns, basePaths) {
+  const probes = /* @__PURE__ */ new Set([...basePaths, ...pathsFromPattern(pattern)]);
+  const anchored = pattern.endsWith("$");
+  const add = (path, extend) => {
+    if (!path.startsWith("/")) {
+      path = `/${path}`;
+    }
+    probes.add(path);
+    if (extend) {
+      probes.add(`${path}x`);
+      probes.add(`${path}/x`);
+    }
+  };
+  for (const fill of ["", "x", "x/x"]) {
+    add(concretize(pattern, fill), !anchored);
+  }
+  for (const other of otherPatterns) {
+    if (!other || !headsOverlap(pattern, other)) {
+      continue;
+    }
+    const otherAnchored = other.endsWith("$");
+    for (const fill of ["", "x"]) {
+      const sample = concretize(other, fill);
+      add(sample, !otherAnchored);
+      if (pattern.includes("*")) {
+        add(concretize(pattern, sample.replace(/^\//, "")), !anchored);
+        add(`${sample}${literalTail(pattern)}`, !anchored);
+      }
+      if (other.includes("*")) {
+        add(concretize(other, concretize(pattern, fill).replace(/^\//, "")), !otherAnchored);
+        add(`${concretize(pattern, fill)}${literalTail(other)}`, !otherAnchored);
+      }
+    }
+  }
+  return [...probes];
 }
 function formatPathDirective(directive) {
   const label = directive.type === "allow" ? "Allow" : "Disallow";
@@ -1426,26 +1474,20 @@ function formatPathDirective(directive) {
 function formatUserAgentList(agents) {
   return agents.map((agent) => `\`${agent}\``).join(", ");
 }
-function ruleChangesOutcome(rules, ruleIndex, probePaths2) {
+function ruleChangesOutcome(rules, ruleIndex, probePaths2, removed) {
+  const withoutRule = new Set(removed).add(ruleIndex);
   for (const path of probePaths2) {
-    const withRule = matchCompiledPathRules(path, rules);
-    const withoutRule = matchCompiledPathRules(path, rules, ruleIndex);
-    if (withRule.allowed !== withoutRule.allowed) {
+    if (matchCompiledPathRules(path, rules, removed).allowed !== matchCompiledPathRules(path, rules, withoutRule).allowed) {
       return true;
     }
   }
   return false;
 }
-function supersedingDirective(pathDirectives, rules, deadRuleIndex) {
+function supersedingDirective(pathDirectives, rules, deadRuleIndex, removed) {
   const deadEntry = pathDirectives[deadRuleIndex];
-  for (let index = 0; index < deadRuleIndex; index++) {
-    if (directiveKey(pathDirectives[index].d) === directiveKey(deadEntry.d)) {
-      return pathDirectives[index].d;
-    }
-  }
   let earliest = null;
   for (const path of pathsFromPattern(deadEntry.d.value)) {
-    const result = matchCompiledPathRules(path, rules, deadRuleIndex);
+    const result = matchCompiledPathRules(path, rules, removed);
     if (result.ruleIndex < 0) {
       continue;
     }
@@ -1473,13 +1515,28 @@ function findDeadRules(doc) {
       d.value
     ));
     const agents = group.userAgents.length > 0 ? group.userAgents : ["*"];
+    const removed = /* @__PURE__ */ new Set();
+    const seen = /* @__PURE__ */ new Set();
+    pathDirectives.forEach(({ d }, index) => {
+      const key = directiveKey(d);
+      if (seen.has(key)) {
+        removed.add(index);
+      }
+      seen.add(key);
+    });
+    const patterns = pathDirectives.map(({ d }) => d.value);
     for (let ri = 1; ri < pathDirectives.length; ri++) {
-      const directive = pathDirectives[ri].d;
-      const probePaths2 = probePathsForDirective(directive.value, baseProbePaths);
-      if (ruleChangesOutcome(compiled, ri, probePaths2)) {
+      const otherPatterns = patterns.filter((_, index) => index !== ri && !removed.has(index));
+      if (removed.has(ri)) {
         continue;
       }
-      const superseding = supersedingDirective(pathDirectives, compiled, ri);
+      const directive = pathDirectives[ri].d;
+      const probePaths2 = probePathsForDirective(directive.value, otherPatterns, baseProbePaths);
+      if (ruleChangesOutcome(compiled, ri, probePaths2, removed)) {
+        continue;
+      }
+      removed.add(ri);
+      const superseding = supersedingDirective(pathDirectives, compiled, ri, removed);
       const supersededBy = superseding ? formatPathDirective(superseding) : "an earlier rule";
       const ruleLabel = directive.type === "allow" ? "Allow" : "Disallow";
       suggestions.push({
@@ -1520,31 +1577,13 @@ function removeLinesFromDocument(doc, linesToRemove) {
     groups: newGroups
   };
 }
-function dedupeDirectivesInDocument(doc) {
-  const newGroups = doc.groups.map((group) => {
-    const seen = /* @__PURE__ */ new Set();
-    const directives = group.directives.filter((d) => {
-      if (d.type !== "allow" && d.type !== "disallow") {
-        return true;
-      }
-      const key = directiveKey(d);
-      if (seen.has(key)) {
-        return false;
-      }
-      seen.add(key);
-      return true;
-    });
-    return { ...group, directives };
-  });
-  return { ...doc, groups: newGroups };
-}
-function addMissingUserAgents(doc) {
+function addMissingUserAgents(doc, startLines) {
   return {
     ...doc,
-    groups: doc.groups.map((group) => group.userAgents.length === 0 && group.directives.length > 0 ? { ...group, userAgents: ["*"] } : group)
+    groups: doc.groups.map((group) => group.userAgents.length === 0 && group.directives.length > 0 && startLines.has(group.startLine) ? { ...group, userAgents: ["*"] } : group)
   };
 }
-function mergeDuplicateGroups(doc) {
+function mergeDuplicateGroups(doc, startLines) {
   const seen = /* @__PURE__ */ new Map();
   const merged = [];
   for (const group of doc.groups) {
@@ -1553,14 +1592,15 @@ function mergeDuplicateGroups(doc) {
       continue;
     }
     const sig = groupSignature(group);
-    if (seen.has(sig)) {
-      const existing = seen.get(sig);
-      const combinedAgents = [.../* @__PURE__ */ new Set([...existing.userAgents, ...group.userAgents])];
-      existing.userAgents = combinedAgents;
+    const existing = seen.get(sig);
+    if (existing && startLines.has(group.startLine)) {
+      existing.userAgents = [.../* @__PURE__ */ new Set([...existing.userAgents, ...group.userAgents])];
       continue;
     }
     const copy = { ...group, userAgents: [...group.userAgents], directives: [...group.directives] };
-    seen.set(sig, copy);
+    if (!existing) {
+      seen.set(sig, copy);
+    }
     merged.push(copy);
   }
   return { ...doc, groups: merged };
@@ -1659,22 +1699,23 @@ function formatOptimizedFromOriginal(doc, optimized) {
 }
 function buildOptimizedText(doc, suggestions) {
   const linesToRemove = /* @__PURE__ */ new Set();
+  const missingUserAgentGroups = /* @__PURE__ */ new Set();
+  const duplicateGroups = /* @__PURE__ */ new Set();
   for (const suggestion of suggestions) {
     if (suggestion.type === "duplicate_directive" || suggestion.type === "dead_rule" || suggestion.type === "empty_group") {
-      for (const line of suggestion.lines) {
-        linesToRemove.add(line);
-      }
+      suggestion.lines.forEach((line) => linesToRemove.add(line));
+    } else if (suggestion.type === "missing_user_agent") {
+      suggestion.lines.forEach((line) => missingUserAgentGroups.add(line));
+    } else if (suggestion.type === "duplicate_group") {
+      suggestion.lines.forEach((line) => duplicateGroups.add(line));
     }
   }
   let optimized = removeLinesFromDocument(doc, linesToRemove);
-  if (suggestions.some((s) => s.type === "duplicate_directive")) {
-    optimized = dedupeDirectivesInDocument(optimized);
+  if (missingUserAgentGroups.size > 0) {
+    optimized = addMissingUserAgents(optimized, missingUserAgentGroups);
   }
-  if (suggestions.some((s) => s.type === "missing_user_agent")) {
-    optimized = addMissingUserAgents(optimized);
-  }
-  if (suggestions.some((s) => s.type === "duplicate_group")) {
-    optimized = mergeDuplicateGroups(optimized);
+  if (duplicateGroups.size > 0) {
+    optimized = mergeDuplicateGroups(optimized, duplicateGroups);
   }
   return formatOptimizedFromOriginal(doc, optimized);
 }

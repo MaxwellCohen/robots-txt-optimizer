@@ -65,7 +65,7 @@ function safeDecodePath(path: string): string {
 export function matchCompiledPathRules(
   path: string,
   rules: readonly CompiledPathRule[],
-  excludeIndex = -1
+  exclude: number | ReadonlySet<number> = -1
 ): { allowed: boolean, ruleIndex: number } {
   if (path === '/robots.txt') {
     return { allowed: true, ruleIndex: -1 }
@@ -75,7 +75,7 @@ export function matchCompiledPathRules(
   const matches: Array<{ rule: CompiledPathRule, index: number }> = []
 
   for (let index = 0; index < rules.length; index++) {
-    if (index === excludeIndex) {
+    if (typeof exclude === 'number' ? index === exclude : exclude.has(index)) {
       continue
     }
     const rule = rules[index]!
