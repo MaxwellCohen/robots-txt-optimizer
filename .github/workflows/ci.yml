@@ -35,3 +35,16 @@ jobs:
 
       - name: Test
         run: pnpm run test
+
+      - name: Check bundled CLI is up to date
+        run: |
+          pnpm --filter @robots-txt-optimizer/cli build
+          git diff --exit-code -- packages/cli/dist || (echo "::error::packages/cli/dist is stale — run 'pnpm --filter @robots-txt-optimizer/cli build' and commit" && exit 1)
+
+      - name: Check this site's robots.txt
+        uses: ./
+        with:
+          path: public/robots.txt
+          expect-allowed: |
+            Googlebot:/
+            Googlebot:/about

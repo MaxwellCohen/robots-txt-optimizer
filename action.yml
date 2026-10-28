@@ -1,0 +1,52 @@
+name: robots.txt check
+description: Validate robots.txt, enforce allowed/blocked paths, and catch sitemap URLs blocked by robots.txt
+author: Maxwell Cohen
+branding:
+  icon: shield
+  color: green
+
+inputs:
+  path:
+    description: robots.txt file path or site URL to check
+    required: false
+    default: public/robots.txt
+  fail-on:
+    description: Fail on `error` (default), `warning`, or `none`
+    required: false
+    default: error
+  expect-allowed:
+    description: Newline-separated `user-agent:path` pairs that must be crawlable (e.g. `Googlebot:/blog`)
+    required: false
+    default: ''
+  expect-blocked:
+    description: Newline-separated `user-agent:path` pairs that must be blocked (e.g. `GPTBot:/`)
+    required: false
+    default: ''
+  check-sitemaps:
+    description: Fetch Sitemap URLs and fail if robots.txt blocks any URL they list
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Check robots.txt
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_EXPECT_ALLOWED: ${{ inputs.expect-allowed }}
+        INPUT_EXPECT_BLOCKED: ${{ inputs.expect-blocked }}
+        INPUT_CHECK_SITEMAPS: ${{ inputs.check-sitemaps }}
+      run: |
+        args=(check "$INPUT_PATH" --format github --fail-on "$INPUT_FAIL_ON")
+        while IFS= read -r line; do
+          [ -n "${line// }" ] && args+=(--expect-allowed "$line")
+        done <<< "$INPUT_EXPECT_ALLOWED"
+        while IFS= read -r line; do
+          [ -n "${line// }" ] && args+=(--expect-blocked "$line")
+        done <<< "$INPUT_EXPECT_BLOCKED"
+        if [ "$INPUT_CHECK_SITEMAPS" = "true" ]; then
+          args+=(--check-sitemaps)
+        fi
+        node "$GITHUB_ACTION_PATH/packages/cli/dist/cli.mjs" "${args[@]}"

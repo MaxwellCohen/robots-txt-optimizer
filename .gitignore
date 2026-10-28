@@ -24,3 +24,6 @@ logs
 .env.*
 !.env.example
 
+
+# Bundled CLI used by the GitHub Action (action.yml)
+!packages/cli/dist/

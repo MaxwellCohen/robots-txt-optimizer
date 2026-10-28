@@ -11,6 +11,8 @@ export interface FetchSitemapsOptions {
   maxBytes?: number
   timeoutMs?: number
   fetch?: typeof globalThis.fetch
+  /** Skip SSRF checks (for trusted local tools such as the CLI). */
+  allowPrivateHosts?: boolean
 }
 
 const DEFAULTS = {
@@ -61,7 +63,9 @@ export async function secureFetchSitemaps(
   options: FetchSitemapsOptions = {}
 ): Promise<SitemapReport> {
   const limits = { ...DEFAULTS, ...options }
-  const fetchImpl = createGuardedFetch(options.fetch)
+  const fetchImpl = options.allowPrivateHosts
+    ? (options.fetch ?? globalThis.fetch)
+    : createGuardedFetch(options.fetch)
   const queue = [...new Set(sitemapUrls)]
   const visited = new Set<string>()
   const urls = new Set<string>()
