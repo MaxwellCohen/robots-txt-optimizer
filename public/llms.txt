@@ -2,7 +2,7 @@
 
 > Web app and TypeScript library for validating, analyzing, and optimizing robots.txt files — check syntax, summarize allow/block rules per user-agent, simulate crawler access, and get cleanup suggestions.
 
-Robots.txt Optimizer is a Nuxt static web app backed by `@robots-txt-optimizer/core`, a framework-agnostic robots engine. Paste robots.txt content or fetch from a URL (with a server-side CORS fallback), then review validation issues, directive summaries, path simulation for common crawlers (Googlebot, Bingbot, GPTBot), and optimization suggestions. Share analyses via `?url=example.com`.
+Robots.txt Optimizer is a Nuxt static web app backed by `@robots-txt-optimizer/core`, a framework-agnostic robots engine. Paste robots.txt content or fetch from a URL (with a server-side CORS fallback), then review fetch diagnostics, validation and crawlability issues, search and AI crawler access (with one-click AI policies), directive summaries, RFC 9309 path simulation, sitemap URLs blocked by robots.txt, and selectable optimization suggestions with a diff. Compare two files at `/compare`. Share analyses via `?url=example.com`. A CLI, GitHub Action, and JSON API (`/api/robots/analyze`) run the same checks.
 
 ## App
 
@@ -12,6 +12,9 @@ Robots.txt Optimizer is a Nuxt static web app backed by `@robots-txt-optimizer/c
 
 - [README](https://github.com/MaxwellCohen/robots-txt-optimizer/blob/main/README.md): Features, quick start, scripts, and project structure.
 - [CONTEXT.md](https://github.com/MaxwellCohen/robots-txt-optimizer/blob/main/CONTEXT.md): Domain glossary — RobotsDocument, path verdict, optimization suggestion, fetch seam.
+
+- [CLI and GitHub Action](https://github.com/MaxwellCohen/robots-txt-optimizer#cli): Check robots.txt in CI with path expectations and sitemap conflict detection.
+- [JSON API](https://github.com/MaxwellCohen/robots-txt-optimizer#json-api): `GET /api/robots/analyze?url=example.com` or `POST /api/robots/analyze` with `{ "text": "..." }`.
 
 ## Optional
 
