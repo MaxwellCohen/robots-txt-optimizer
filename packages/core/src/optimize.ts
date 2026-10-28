@@ -268,10 +268,12 @@ function removeLinesFromDocument(doc: RobotsDocument, linesToRemove: Set<number>
 
   for (const group of doc.groups) {
     const keptDirectives = group.directives.filter(d => !linesToRemove.has(d.line))
-    if (keptDirectives.length === 0 && group.userAgents.length === 0) {
-      continue
-    }
-    if (keptDirectives.length === 0 && group.userAgents.length > 0) {
+    // Drop groups emptied by removals, or explicitly removed empty groups;
+    // keep groups that were already empty unless that removal was selected.
+    if (
+      keptDirectives.length === 0
+      && (group.directives.length > 0 || linesToRemove.has(group.startLine))
+    ) {
       continue
     }
     newGroups.push({
@@ -467,7 +469,9 @@ export function buildOptimizedText(doc: RobotsDocument, suggestions: Optimizatio
   }
 
   let optimized = removeLinesFromDocument(doc, linesToRemove)
-  optimized = dedupeDirectivesInDocument(optimized)
+  if (suggestions.some(s => s.type === 'duplicate_directive')) {
+    optimized = dedupeDirectivesInDocument(optimized)
+  }
 
   if (suggestions.some(s => s.type === 'missing_user_agent')) {
     optimized = addMissingUserAgents(optimized)

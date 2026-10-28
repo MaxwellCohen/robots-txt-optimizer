@@ -1,12 +1,7 @@
-import { decodePath, parse, type RobotRule, type Rule } from 'robots-linter'
-import type { RobotsDocument } from './types'
-import { stripComment } from './parse'
-import {
-  normalizeDirectiveName,
-  normalizeUserAgentForMatch,
-  textForMatching,
-  userAgentMatches
-} from './robots-text'
+import { decodePath } from 'robots-linter'
+import type { Directive, RobotsDocument, UserAgentGroup } from './types'
+import { parseRobotsTxt } from './parse'
+import { normalizeUserAgentForMatch, userAgentMatches } from './robots-text'
 
 export interface PathMatchResult {
   allowed: boolean
@@ -42,22 +37,6 @@ function toRegExpPath(path: string): RegExp {
 
 function isStarUserAgent(agent: string): boolean {
   return normalizeUserAgentForMatch(agent) === '*'
-}
-
-function getApplicableRules(robotRules: RobotRule[], userAgent: string): Rule[] {
-  const specificMatches = robotRules.filter(
-    rr => !isStarUserAgent(rr.userAgent) && userAgentMatches(rr.userAgent, userAgent)
-  )
-
-  const matches = specificMatches.length > 0
-    ? specificMatches
-    : robotRules.filter(rr => isStarUserAgent(rr.userAgent))
-
-  const rules: Rule[] = []
-  for (const rr of matches) {
-    rules.push(...rr.rules)
-  }
-  return rules
 }
 
 export interface CompiledPathRule {
@@ -133,61 +112,6 @@ function bySpecificity(
   return 0
 }
 
-function matchRules(path: string, rules: Rule[]): { allowed: boolean, rule: Rule | null, ruleIndex: number } {
-  const compiled: CompiledPathRule[] = rules.map(rule => ({
-    type: rule.type === 'ALLOW' ? 'ALLOW' : 'DISALLOW',
-    path: rule.path,
-    regex: toRegExpPath(rule.path)
-  }))
-  const { allowed, ruleIndex } = matchCompiledPathRules(path, compiled)
-  return {
-    allowed,
-    rule: ruleIndex >= 0 ? rules[ruleIndex]! : null,
-    ruleIndex
-  }
-}
-
-function ruleType(rule: Rule | null): PathMatchResult['matchedRuleType'] {
-  if (!rule) {
-    return 'none'
-  }
-  return rule.type === 'ALLOW' ? 'allow' : 'disallow'
-}
-
-function parseRobotsRules(robotsTxt: string, doc?: RobotsDocument): RobotRule[] | null {
-  const text = doc ? textForMatching(doc) : robotsTxt
-  try {
-    return parse(text)
-  } catch {
-    return null
-  }
-}
-
-function buildRuleLineMap(robotsTxt: string): Map<number, number> {
-  const map = new Map<number, number>()
-  let ruleIndex = 0
-  const lines = robotsTxt.split(/\r?\n/)
-
-  for (let i = 0; i < lines.length; i++) {
-    const lineNum = i + 1
-    const content = stripComment(lines[i] ?? '')
-    if (!content) {
-      continue
-    }
-    const colonIndex = content.indexOf(':')
-    if (colonIndex === -1) {
-      continue
-    }
-    const name = normalizeDirectiveName(content.slice(0, colonIndex).trim())
-    if (name === 'allow' || name === 'disallow') {
-      map.set(ruleIndex, lineNum)
-      ruleIndex++
-    }
-  }
-
-  return map
-}
-
 function groupMatchesUserAgent(
   groupAgents: string[],
   userAgent: string,
@@ -202,10 +126,12 @@ function groupMatchesUserAgent(
   )
 }
 
-function buildDocumentRuleLineMap(doc: RobotsDocument, userAgent: string): Map<number, number> {
-  const map = new Map<number, number>()
-  let ruleIndex = 0
-
+/**
+ * Groups that apply to `userAgent`: every group naming it, or the `*` groups
+ * when none do. Rules from all applicable groups are combined (RFC 9309).
+ * Groups with rules but no User-agent line are treated as `*`.
+ */
+export function findApplicableGroups(doc: RobotsDocument, userAgent: string): UserAgentGroup[] {
   const groups = doc.groups.map(group => ({
     group,
     agents: group.userAgents.length > 0 ? group.userAgents : ['*']
@@ -214,48 +140,36 @@ function buildDocumentRuleLineMap(doc: RobotsDocument, userAgent: string): Map<n
   const specificGroups = groups.filter(({ agents }) =>
     groupMatchesUserAgent(agents, userAgent, 'specific')
   )
-  const applicableGroups = specificGroups.length > 0
+  const applicable = specificGroups.length > 0
     ? specificGroups
     : groups.filter(({ agents }) => groupMatchesUserAgent(agents, userAgent, 'star'))
 
-  for (const { group } of applicableGroups) {
-    for (const directive of group.directives) {
-      if (directive.type !== 'allow' && directive.type !== 'disallow') {
-        continue
-      }
-      map.set(ruleIndex, directive.line)
-      ruleIndex++
-    }
-  }
-
-  if (map.size === 0) {
-    return buildRuleLineMap(textForMatching(doc))
-  }
-
-  return map
+  return applicable.map(({ group }) => group)
 }
 
 export function checkRobotsPath(
   robotsTxt: string,
   userAgent: string,
   path: string,
-  doc?: RobotsDocument
+  doc: RobotsDocument = parseRobotsTxt(robotsTxt)
 ): PathMatchResult {
-  const robotRules = parseRobotsRules(robotsTxt, doc)
-  if (!robotRules) {
-    return DEFAULT_MATCH
-  }
+  const directives: Directive[] = findApplicableGroups(doc, userAgent).flatMap(group =>
+    group.directives.filter(directive => directive.type === 'allow' || directive.type === 'disallow')
+  )
+  const compiled = directives.map(directive =>
+    compilePathRule(directive.type === 'allow' ? 'allow' : 'disallow', directive.value)
+  )
+  const { allowed, ruleIndex } = matchCompiledPathRules(path, compiled)
+  const winner = ruleIndex >= 0 ? directives[ruleIndex]! : null
 
-  const rules = getApplicableRules(robotRules, userAgent)
-  const { allowed, rule, ruleIndex } = matchRules(path, rules)
-  const lineMap = doc
-    ? buildDocumentRuleLineMap(doc, userAgent)
-    : buildRuleLineMap(robotsTxt)
+  if (!winner) {
+    return { ...DEFAULT_MATCH }
+  }
 
   return {
     allowed,
-    matchedPattern: rule?.path ?? '(default allow)',
-    matchedRuleType: ruleType(rule),
-    matchingLine: ruleIndex >= 0 ? (lineMap.get(ruleIndex) ?? 0) : 0
+    matchedPattern: winner.value,
+    matchedRuleType: winner.type === 'allow' ? 'allow' : 'disallow',
+    matchingLine: winner.line
   }
 }

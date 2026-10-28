@@ -1,3 +1,5 @@
+import type { CrawlerAccess } from './crawlers'
+
 export type IssueSeverity = 'error' | 'warning'
 
 export interface ValidationIssue {
@@ -81,6 +83,7 @@ export interface RobotsAnalysis {
   pathSimulation: PathVerdict[]
   suggestions: OptimizationSuggestion[]
   optimizedText: string
+  crawlerAccess: CrawlerAccess[]
 }
 
 export interface FetchResult {
@@ -89,6 +92,12 @@ export interface FetchResult {
   status: number
   contentType: string | null
   source: 'client' | 'server'
+  /** True when the request was redirected before reaching `finalUrl`. */
+  redirected?: boolean
+  /** Response body size in bytes. */
+  bytes?: number
+  /** True when the body starts with a UTF-8 byte order mark. */
+  hasBom?: boolean
 }
 
 export interface FetchError {

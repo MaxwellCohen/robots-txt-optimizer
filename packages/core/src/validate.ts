@@ -2,6 +2,7 @@ import { parse as lintParse } from 'robots-linter'
 import { isUserAgentLineContent, stripComment } from './parse'
 import { textForLint, normalizeDirectiveName } from './robots-text'
 import type { RobotsDocument, ValidationIssue, ValidationResult } from './types'
+import { collectCrawlabilityIssues } from './checks'
 
 const NON_RFC_DIRECTIVES = new Set(['crawldelay', 'host', 'contentsignal'])
 const MAX_LINE_LENGTH = 4096
@@ -233,6 +234,7 @@ export function validateRobotsDocument(doc: RobotsDocument): ValidationResult {
 
   issues.push(...collectDirectiveWarnings(doc))
   issues.push(...collectSemanticIssues(doc))
+  issues.push(...collectCrawlabilityIssues(doc))
 
   const deduped = dedupeIssues(issues)
   const ok = !deduped.some(i => i.severity === 'error')

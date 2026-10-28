@@ -45,3 +45,23 @@ describe('checkRobotsPath (RFC 9309 matching)', () => {
     expect(allowed(robots, '/anything')).toBe(true)
   })
 })
+
+describe('checkRobotsPath group handling', () => {
+  it('applies shared rules to every user-agent in a group', () => {
+    const robots = 'User-agent: GPTBot\nUser-agent: ClaudeBot\nDisallow: /'
+    expect(allowed(robots, '/', 'GPTBot')).toBe(false)
+    expect(allowed(robots, '/', 'ClaudeBot')).toBe(false)
+    expect(allowed(robots, '/', 'Googlebot')).toBe(true)
+  })
+
+  it('combines rules from separate groups for the same user-agent', () => {
+    const robots = 'User-agent: Googlebot\nDisallow: /a\n\nUser-agent: Googlebot\nDisallow: /b'
+    expect(allowed(robots, '/a')).toBe(false)
+    expect(allowed(robots, '/b')).toBe(false)
+  })
+
+  it('reports the line of the winning rule', () => {
+    const result = checkRobotsPath('User-agent: *\nDisallow: /\nAllow: /blog', 'Googlebot', '/blog/x')
+    expect(result).toMatchObject({ allowed: true, matchedPattern: '/blog', matchingLine: 3 })
+  })
+})
