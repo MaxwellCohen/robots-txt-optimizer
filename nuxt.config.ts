@@ -73,8 +73,9 @@ export default defineNuxtConfig({
     // https://nuxt.com/blog/v4-5#%EF%B8%8F-forwarded-preload-hints-on-prefetch
     prefetchPreloadTags: true,
     early404: true,
-    // Smaller HTML; state ships in a separate cacheable JSON payload.
-    payloadExtraction: true
+    // Inline payload in the initial HTML (no /_payload.json request on first load);
+    // still extract it to _payload.json for client-side navigation.
+    payloadExtraction: 'client'
   },
 
   compatibilityDate: '2026-09-01',
