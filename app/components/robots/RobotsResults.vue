@@ -8,11 +8,18 @@ defineProps<{
 
 const emit = defineEmits<{
   'update:simulationConfig': [config: SimulationConfig]
+  'applyText': [text: string]
 }>()
 </script>
 
 <template>
   <RobotsValidationReport :validation="analysis.validation" />
+
+  <RobotsAiCrawlers
+    :document="analysis.document"
+    :access="analysis.crawlerAccess"
+    @apply-text="emit('applyText', $event)"
+  />
 
   <RobotsDirectiveSummary :rows="analysis.directiveSummary" />
 
@@ -22,8 +29,11 @@ const emit = defineEmits<{
     @update:config="emit('update:simulationConfig', $event)"
   />
 
+  <RobotsSitemapCheck :document="analysis.document" />
+
   <RobotsOptimizationList
+    :document="analysis.document"
     :suggestions="analysis.suggestions"
-    :optimized-text="analysis.optimizedText"
+    @apply-text="emit('applyText', $event)"
   />
 </template>

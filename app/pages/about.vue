@@ -73,13 +73,43 @@ const features = [
     icon: 'i-lucide-route',
     title: 'Path simulation',
     description:
-      'Test how Googlebot, Bingbot, GPTBot, or any user-agent would treat paths like /, /admin, or /api/.'
+      'Test how Googlebot, Bingbot, GPTBot, or any user-agent would treat paths like /, /admin, or /api/, using RFC 9309 longest-match rules.'
   },
   {
     icon: 'i-lucide-sparkles',
     title: 'Optimization',
     description:
-      'Detect redundant or ineffective rules and preview a cleaned robots.txt you can copy — comments and unchanged lines are preserved.'
+      'Detect redundant or ineffective rules, pick which fixes to apply, and review them as a diff — comments and unchanged lines are preserved.'
+  },
+  {
+    icon: 'i-lucide-bot',
+    title: 'AI crawler controls',
+    description:
+      'See which search engines and AI crawlers (GPTBot, ClaudeBot, Google-Extended, PerplexityBot, and more) can reach your site, and apply a policy in one click.'
+  },
+  {
+    icon: 'i-lucide-map',
+    title: 'Sitemap check',
+    description:
+      'Fetch your sitemaps and find URLs you ask search engines to index but block in robots.txt.'
+  },
+  {
+    icon: 'i-lucide-server',
+    title: 'Fetch diagnostics',
+    description:
+      'Learn how crawlers treat your server response: 5xx errors block the whole site, 4xx means no rules, and Google stops reading after 500 KiB.'
+  },
+  {
+    icon: 'i-lucide-git-compare',
+    title: 'Compare & change tracking',
+    description:
+      'Compare staging with production, and get a heads-up when a site\'s robots.txt changed since you last checked it.'
+  },
+  {
+    icon: 'i-lucide-terminal',
+    title: 'CLI, GitHub Action & API',
+    description:
+      'Run the same checks in CI to stop a bad robots.txt from shipping, or call the JSON API from your own tools.'
   }
 ] as const
 </script>

@@ -15,3 +15,9 @@ export {
   isTextResponse,
   validateFetchResult
 } from './validate-response'
+export {
+  diagnoseFetch,
+  GOOGLE_MAX_ROBOTS_BYTES,
+  type FetchDiagnostic,
+  type FetchDiagnosticSeverity
+} from './diagnose'

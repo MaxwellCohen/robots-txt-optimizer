@@ -9,7 +9,8 @@
     "postinstall": "nuxt prepare",
     "lint": "nuxt prepare && eslint .",
     "typecheck": "nuxt typecheck",
-    "test": "pnpm --filter @robots-txt-optimizer/core test"
+    "test": "pnpm --filter @robots-txt-optimizer/core --filter @robots-txt-optimizer/cli test",
+    "build:cli": "pnpm --filter @robots-txt-optimizer/cli build"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.140",

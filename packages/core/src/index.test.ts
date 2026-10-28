@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { analyzeRobotsTxt, parseRobotsTxt, simulatePaths } from './index'
+import { analyzeRobotsTxt, buildOptimizedText, compareRobotsTxt, parseRobotsTxt, simulatePaths } from './index'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -232,17 +232,55 @@ Disallow: /admin`
     expect(dead?.message).toContain('Bingbot')
   })
 
-  it('names the earliest matching rule when a duplicate allow is dead', () => {
+  it('reports an exact duplicate once, as a duplicate rather than a dead rule', () => {
     const text = `User-agent: *
 Allow: /blog/post-1
 Allow: /blog/post-1`
 
     const result = analyzeRobotsTxt(text)
-    const dead = result.suggestions.find(
-      s => s.type === 'dead_rule' && s.message.includes('/blog/post-1')
-    )
 
-    expect(dead?.message).toContain('superseded by Allow: /blog/post-1')
+    expect(result.suggestions.map(s => `${s.type}:${s.lines.join(',')}`)).toEqual(['duplicate_directive:3'])
+  })
+
+  it('never removes every copy of a rule that is repeated', () => {
+    const text = `User-agent: *
+Disallow: /a
+Disallow: /b
+Disallow: /b
+Disallow: /c
+Disallow: /c*`
+
+    const result = analyzeRobotsTxt(text)
+
+    expect(result.optimizedText.match(/Disallow: \/b$/gm)).toHaveLength(1)
+    expect(result.optimizedText.match(/Disallow: \/c\*?$/gm)).toHaveLength(1)
+    expect(compareRobotsTxt(text, result.optimizedText).verdictChanges).toEqual([])
+  })
+
+  it('applies only the selected suggestions', () => {
+    const text = `User-agent: *
+Disallow: /a
+Disallow: /a
+Disallow: /a
+Disallow: /b
+Disallow: /b
+
+User-agent: X
+Disallow: /q
+
+User-agent: X
+Disallow: /q`
+    const doc = parseRobotsTxt(text)
+    const suggestions = analyzeRobotsTxt(text).suggestions
+    const pick = (type: string, line: number) => suggestions.filter(s => s.type === type && s.lines.includes(line))
+
+    expect(buildOptimizedText(doc, pick('duplicate_directive', 3)))
+      .toBe(text.replace('Disallow: /a\nDisallow: /a\nDisallow: /a', 'Disallow: /a\nDisallow: /a'))
+    expect(buildOptimizedText(doc, [])).toBe(text)
+    expect(buildOptimizedText(doc, pick('duplicate_group', 11)))
+      .toMatch(/User-agent: X\nDisallow: \/q$/)
+    expect(buildOptimizedText(doc, pick('duplicate_group', 11)).match(/User-agent: X/g)).toHaveLength(1)
+    expect(buildOptimizedText(doc, pick('duplicate_group', 11))).toContain('Disallow: /a\nDisallow: /a\nDisallow: /a')
   })
 
   it('names non-RFC directives in validation warnings', () => {
@@ -343,5 +381,27 @@ Disallow: /`
       userAgents: suggestion.userAgents,
       message: suggestion.message
     }))).toEqual(expected)
+  })
+})
+
+describe('optimizedText safety', () => {
+  it('never changes a crawl verdict (randomized)', () => {
+    const patterns = ['/', '/a', '/a/', '/a*', '/a$', '/a/b', '/*.js$', '/b', '/b*', '/a/b/c', '/*?q=', '/*/b', '/a*b', '/*b$', '/ab', '']
+    const paths = ['/', '/a', '/a/', '/ab', '/a/b', '/a/b/c', '/x.js', '/a/x.js', '/b', '/bc', '/?q=1', '/a?q=1', '/a/b?q=1', '/xb', '/x/b', '/axb', '/a.js']
+    let seed = 7
+    const random = (n: number) => {
+      seed = (seed * 1103515245 + 12345) % 2147483648
+      return seed % n
+    }
+
+    for (let i = 0; i < 1500; i++) {
+      const lines = ['User-agent: *']
+      for (let k = 0; k < 2 + random(7); k++) {
+        lines.push(`${random(2) ? 'Allow' : 'Disallow'}: ${patterns[random(patterns.length)]}`)
+      }
+      const text = lines.join('\n')
+      const { verdictChanges } = compareRobotsTxt(text, analyzeRobotsTxt(text).optimizedText, { paths })
+      expect(verdictChanges, text).toEqual([])
+    }
   })
 })

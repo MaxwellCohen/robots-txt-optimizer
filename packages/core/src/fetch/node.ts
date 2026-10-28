@@ -1,6 +1,6 @@
 import { isIP } from 'node:net'
 import { lookup } from 'node:dns/promises'
-import { RobotsFetchSecurityError } from './errors'
+import { RobotsFetchError, RobotsFetchSecurityError } from './errors'
 import { fetchRobotsTxt } from './fetch-robots'
 import { normalizeRobotsUrl } from './normalize-url'
 import type { FetchResult } from '../types'
@@ -73,11 +73,46 @@ export async function assertPublicHost(url: URL): Promise<void> {
   }
 }
 
+const MAX_REDIRECTS = 5
+
+/**
+ * fetch() that follows redirects manually, re-checking every hop so a public
+ * host cannot redirect the server to a private address.
+ */
+export function createGuardedFetch(baseFetch: typeof globalThis.fetch = globalThis.fetch): typeof globalThis.fetch {
+  return (async (input: string | URL | Request, init?: RequestInit) => {
+    let url = new URL(input instanceof Request ? input.url : input.toString())
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      await assertPublicHost(url)
+      const response = await baseFetch(url.toString(), { ...init, redirect: 'manual' })
+      const location = response.headers.get('location')
+      if (response.status < 300 || response.status >= 400 || !location) {
+        if (hop === 0) {
+          return response
+        }
+        // Response.url/redirected are read-only; expose the final hop explicitly.
+        Object.defineProperty(response, 'url', { value: url.toString() })
+        Object.defineProperty(response, 'redirected', { value: true })
+        return response
+      }
+      await response.body?.cancel()
+      url = new URL(location, url)
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        throw new RobotsFetchSecurityError('Redirect to a non-http(s) URL is not allowed', 'UNSAFE_REDIRECT')
+      }
+    }
+    throw new RobotsFetchError(`More than ${MAX_REDIRECTS} redirects`, 'TOO_MANY_REDIRECTS')
+  }) as typeof globalThis.fetch
+}
+
+export const SERVER_USER_AGENT = 'robots-txt-optimizer/1.0'
+
 export async function secureFetchRobotsTxt(input: string): Promise<FetchResult> {
   const url = normalizeRobotsUrl(input)
-  await assertPublicHost(url)
   return await fetchRobotsTxt(url, {
-    userAgent: 'robots-txt-optimizer/1.0',
+    fetch: createGuardedFetch(),
+    userAgent: SERVER_USER_AGENT,
     source: 'server'
   })
 }
+export { secureFetchSitemaps, type FetchSitemapsOptions } from './sitemap-node'

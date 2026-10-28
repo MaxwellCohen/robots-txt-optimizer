@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FetchError, ValidationIssue } from '@robots-txt-optimizer/core'
+import { getRobotsTemplates } from '@robots-txt-optimizer/core/templates'
 
 const emit = defineEmits<{
   analyzeUrl: [url: string]
@@ -19,11 +20,12 @@ const props = defineProps<{
 const url = ref(props.initialUrl ?? '')
 const pastedText = ref(props.initialPastedText ?? '')
 
+// Sync flush so a parent can clear and re-set the same text to force a reload.
 watch(() => props.initialPastedText, (value) => {
   if (value !== undefined && value !== pastedText.value) {
     pastedText.value = value
   }
-})
+}, { flush: 'sync' })
 
 watch(() => props.loadedText, (value) => {
   if (value !== null && value !== undefined) {
@@ -42,6 +44,19 @@ function submitUrl() {
     emit('analyzeUrl', url.value.trim())
   }
 }
+
+const templateItems = computed(() => [
+  getRobotsTemplates().map(template => ({
+    label: template.name,
+    description: template.description,
+    onSelect: () => {
+      if (pastedText.value.trim() && !window.confirm(`Replace the current content with the ${template.name} template?`)) {
+        return
+      }
+      pastedText.value = template.text
+    }
+  }))
+])
 
 watch(pastedText, (value) => {
   emit('analyzeText', value)
@@ -107,6 +122,23 @@ watch(pastedText, (value) => {
       </UAlert>
 
       <UFormField label="robots.txt content">
+        <template #hint>
+          <UDropdownMenu
+            :items="templateItems"
+            :content="{ align: 'end' }"
+            :ui="{ content: 'w-80', itemDescription: 'whitespace-normal' }"
+          >
+            <UButton
+              variant="link"
+              size="xs"
+              icon="i-lucide-layout-template"
+              trailing-icon="i-lucide-chevron-down"
+              class="p-0"
+            >
+              Start from a template
+            </UButton>
+          </UDropdownMenu>
+        </template>
         <RobotsLineNumberTextarea
           v-model="pastedText"
           :rows="12"

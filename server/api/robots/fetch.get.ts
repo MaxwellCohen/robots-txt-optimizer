@@ -1,10 +1,6 @@
-import {
-  RobotsFetchError,
-  RobotsFetchSecurityError,
-  RobotsUrlError
-} from '@robots-txt-optimizer/core/fetch'
 import { secureFetchRobotsTxt } from '@robots-txt-optimizer/core/node'
 import { createError, defineEventHandler, getQuery } from 'nuxt/server'
+import { toHttpError } from '../../utils/robots-errors'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -17,16 +13,6 @@ export default defineEventHandler(async (event) => {
   try {
     return await secureFetchRobotsTxt(urlParam)
   } catch (err) {
-    if (err instanceof RobotsUrlError) {
-      throw createError({ statusCode: 400, message: err.message })
-    }
-    if (err instanceof RobotsFetchSecurityError) {
-      throw createError({ statusCode: 403, message: err.message })
-    }
-    if (err instanceof RobotsFetchError) {
-      const statusCode = err.code === 'TOO_LARGE' ? 413 : 504
-      throw createError({ statusCode, message: err.message })
-    }
-    throw err
+    toHttpError(err)
   }
 })
