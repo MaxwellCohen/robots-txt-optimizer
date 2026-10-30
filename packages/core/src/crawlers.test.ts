@@ -109,3 +109,23 @@ describe('collectCrawlabilityIssues', () => {
     expect(issues).toEqual([expect.objectContaining({ line: 4, message: expect.stringContaining('ClaudeBot') })])
   })
 })
+
+describe('AI training policy token', () => {
+  const token = '__usage_ai-training'
+
+  it('is not matched by the wildcard group', () => {
+    const text = 'User-agent: *\nDisallow: /'
+    expect(statusOf(text, token).status).toBe('allowed')
+    expect(checkRobotsPath(text, token, '/').allowed).toBe(true)
+  })
+
+  it('honors an explicit group', () => {
+    const text = `User-agent: ${token}\nDisallow: /\nAllow: /press-kit/`
+    expect(statusOf(text, token).status).toBe('blocked')
+    expect(checkRobotsPath(text, token, '/press-kit/a').allowed).toBe(true)
+  })
+
+  it('is included in the block-ai-training preset', () => {
+    expect(crawlerPolicyFromPreset('block-ai-training')[token]).toBe('block')
+  })
+})

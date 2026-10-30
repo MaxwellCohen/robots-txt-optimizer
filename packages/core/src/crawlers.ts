@@ -22,6 +22,9 @@ export const CRAWLER_CATEGORY_LABELS: Record<CrawlerCategory, string> = {
   'ai-user': 'AI user-triggered fetches'
 }
 
+/** Shared policy token for AI training; not a crawler, and never matched by `User-agent: *`. */
+export const AI_TRAINING_POLICY_TOKEN = '__usage_ai-training'
+
 export const KNOWN_CRAWLERS: readonly KnownCrawler[] = [
   { token: 'Googlebot', operator: 'Google', category: 'search', description: 'Google Search crawler' },
   { token: 'Bingbot', operator: 'Microsoft', category: 'search', description: 'Bing Search crawler (also powers Copilot answers)' },
@@ -32,6 +35,7 @@ export const KNOWN_CRAWLERS: readonly KnownCrawler[] = [
 
   { token: 'GPTBot', operator: 'OpenAI', category: 'ai-training', description: 'Collects content to train OpenAI models' },
   { token: 'ClaudeBot', operator: 'Anthropic', category: 'ai-training', description: 'Collects content to train Anthropic models' },
+  { token: AI_TRAINING_POLICY_TOKEN, operator: 'Shared (IETF AIPREF)', category: 'ai-training', description: 'Provider-neutral AI training preference signal (draft-kelley-aipref-training-preference-signal); `User-agent: *` groups do not apply to it', controlToken: true },
   { token: 'Google-Extended', operator: 'Google', category: 'ai-training', description: 'Controls use of Googlebot-crawled content for Gemini training and grounding; does not affect Google Search', controlToken: true },
   { token: 'Applebot-Extended', operator: 'Apple', category: 'ai-training', description: 'Controls use of Applebot-crawled content for Apple AI training', controlToken: true },
   { token: 'CCBot', operator: 'Common Crawl', category: 'ai-training', description: 'Open web crawl widely used as AI training data' },

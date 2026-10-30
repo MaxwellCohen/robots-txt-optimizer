@@ -118,6 +118,20 @@ export function getRobotsTemplates(): RobotsTemplate[] {
       name: 'Allow search, block AI training',
       description: 'Stay in search engines and AI answers, but opt out of model training crawlers',
       text: applyCrawlerPolicy(parseRobotsTxt(ALLOW_ALL), crawlerPolicyFromPreset('block-ai-training'))
+    },
+    {
+      id: 'ai-training-signal',
+      name: 'Shared AI training signal',
+      description: 'Opt out of AI training with the provider-neutral __usage_ai-training token (IETF AIPREF draft), with an Allow exception',
+      text: `${ALLOW_ALL.trimEnd().split('\n\n')[0]}
+
+# Shared AI training preference: "*" groups do not apply to this token
+User-agent: __usage_ai-training
+Disallow: /
+Allow: /press-kit/
+
+${SITEMAP}
+`
     }
   ]
   return cached

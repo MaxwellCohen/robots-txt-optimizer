@@ -131,6 +131,11 @@ function groupMatchesUserAgent(
  * when none do. Rules from all applicable groups are combined (RFC 9309).
  * Groups with rules but no User-agent line are treated as `*`.
  */
+/** Policy tokens (e.g. `__usage_ai-training`) are never matched by `User-agent: *`. */
+function isPolicyToken(userAgent: string): boolean {
+  return normalizeUserAgentForMatch(userAgent) === normalizeUserAgentForMatch('__usage_ai-training')
+}
+
 export function findApplicableGroups(doc: RobotsDocument, userAgent: string): UserAgentGroup[] {
   const groups = doc.groups.map(group => ({
     group,
@@ -142,7 +147,9 @@ export function findApplicableGroups(doc: RobotsDocument, userAgent: string): Us
   )
   const applicable = specificGroups.length > 0
     ? specificGroups
-    : groups.filter(({ agents }) => groupMatchesUserAgent(agents, userAgent, 'star'))
+    : isPolicyToken(userAgent)
+      ? []
+      : groups.filter(({ agents }) => groupMatchesUserAgent(agents, userAgent, 'star'))
 
   return applicable.map(({ group }) => group)
 }
