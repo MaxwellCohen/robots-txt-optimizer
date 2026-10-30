@@ -64,10 +64,6 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-09-01',
 
   nitro: {
-    // Kept: removal not verified against a build.
-    future: {
-      nativeSWR: true
-    },
     preset: 'vercel',
     prerender: {
       crawlLinks: true,
