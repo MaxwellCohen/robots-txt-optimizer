@@ -81,10 +81,6 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-09-01',
 
   nitro: {
-    future: {
-      // Prefer explicit `isr` route rules on Vercel (no legacy swr/static mapping).
-      nativeSWR: true
-    },
     preset: 'vercel',
     prerender: {
       crawlLinks: true,
