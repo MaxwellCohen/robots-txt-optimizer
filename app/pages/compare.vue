@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { compareRobotsTxt, type RobotsComparison } from '@robots-txt-optimizer/core'
 import { useDebounceFn } from '@vueuse/core'
-import { useRobotsFetch } from '~/composables/useRobotsFetch'
 
 useSeoMeta({
   title: 'Compare robots.txt files',
@@ -106,6 +105,7 @@ onMounted(() => {
         />
         <RobotsLineNumberTextarea
           v-model="side.text"
+          :aria-label="`${labels[side.queryKey]} robots.txt content`"
           :rows="12"
           :validation-issues="[]"
           placeholder="Paste robots.txt content"

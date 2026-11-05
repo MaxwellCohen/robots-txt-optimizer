@@ -1,5 +1,4 @@
 import { useDebounceFn } from '@vueuse/core'
-import { compressTextForUrl, decompressTextFromUrl } from '~/utils/url-text'
 
 export const ROBOTS_TEXT_QUERY_KEY = 'r'
 
@@ -9,14 +8,8 @@ type ShareContext = {
 }
 
 export function useRobotsTextUrl() {
-  const route = useRoute()
-  const router = useRouter()
+  const { route, value: textFromQuery, replace, clear, write } = useQueryParam(ROBOTS_TEXT_QUERY_KEY)
   const textWrittenToQuery = ref<string | null>(null)
-
-  const textFromQuery = computed(() => {
-    const value = route.query[ROBOTS_TEXT_QUERY_KEY]
-    return typeof value === 'string' ? value : ''
-  })
 
   async function decodeTextFromQuery(encoded: string): Promise<string | null> {
     if (!encoded) {
@@ -36,19 +29,17 @@ export function useRobotsTextUrl() {
 
     // Priority 1: share via loaded URL when text still matches fetched content
     if (shareUrl && fetchedText != null && text === fetchedText) {
-      const { [ROBOTS_TEXT_QUERY_KEY]: _, ...rest } = route.query
       if (route.query.url === shareUrl && !textFromQuery.value) {
         return
       }
-      await router.replace({ query: { ...rest, url: shareUrl } })
+      await replace({ ...omitQueryKeys(route.query, ROBOTS_TEXT_QUERY_KEY), url: shareUrl })
       return
     }
 
     // Priority 2 & 3: pasted text or edited loaded text — share compressed
     if (!text.trim()) {
       if (textFromQuery.value) {
-        const { [ROBOTS_TEXT_QUERY_KEY]: _, ...rest } = route.query
-        await router.replace({ query: rest })
+        await clear()
       }
       return
     }
@@ -59,13 +50,7 @@ export function useRobotsTextUrl() {
     }
 
     textWrittenToQuery.value = encoded
-    const { url: _, ...rest } = route.query
-    await router.replace({
-      query: {
-        ...rest,
-        [ROBOTS_TEXT_QUERY_KEY]: encoded
-      }
-    })
+    await write(encoded, 'url')
   }, 500)
 
   return {

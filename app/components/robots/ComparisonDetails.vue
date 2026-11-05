@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CrawlerAccessStatus, RobotsComparison } from '@robots-txt-optimizer/core'
+import type { RobotsComparison } from '@robots-txt-optimizer/core'
 
 const props = withDefaults(defineProps<{
   comparison: RobotsComparison
@@ -9,12 +9,6 @@ const props = withDefaults(defineProps<{
   beforeLabel: 'Before',
   afterLabel: 'After'
 })
-
-const statusLabels: Record<CrawlerAccessStatus, string> = {
-  allowed: 'Allowed',
-  partial: 'Partly blocked',
-  blocked: 'Blocked'
-}
 
 const columns = computed(() => [
   { accessorKey: 'userAgent', header: 'User-agent' },
@@ -35,6 +29,10 @@ const verdictRows = computed(() =>
     afterRule: change.afterLine ? `line ${change.afterLine}: ${change.afterRule}` : change.afterRule
   }))
 )
+
+const verdictBadge = (allowed: boolean) => allowed
+  ? { color: 'primary' as const, label: 'Allowed' }
+  : { color: 'error' as const, label: 'Blocked' }
 
 const totalChanges = computed(() => props.comparison.verdictChanges.length)
 const newlyBlocked = computed(() => props.comparison.verdictChanges.filter(change => !change.after).length)
@@ -60,15 +58,15 @@ const newlyBlocked = computed(() => props.comparison.verdictChanges.filter(chang
             <UBadge
               color="neutral"
               variant="subtle"
-            >{{ statusLabels[change.before] }}</UBadge>
+            >{{ crawlerStatusStyle[change.before].label }}</UBadge>
             <UIcon
               name="i-lucide-arrow-right"
               class="size-3"
             />
             <UBadge
-              :color="change.after === 'blocked' ? 'error' : change.after === 'partial' ? 'warning' : 'primary'"
+              :color="crawlerStatusStyle[change.after].color"
               variant="subtle"
-            >{{ statusLabels[change.after] }}</UBadge>
+            >{{ crawlerStatusStyle[change.after].label }}</UBadge>
           </span>
         </li>
       </ul>
@@ -92,20 +90,20 @@ const newlyBlocked = computed(() => props.comparison.verdictChanges.filter(chang
         <template #before-cell="{ row }">
           <UTooltip :text="row.original.beforeRule">
             <UBadge
-              :color="row.original.before ? 'primary' : 'error'"
+              :color="verdictBadge(row.original.before).color"
               variant="subtle"
             >
-              {{ row.original.before ? 'Allowed' : 'Blocked' }}
+              {{ verdictBadge(row.original.before).label }}
             </UBadge>
           </UTooltip>
         </template>
         <template #after-cell="{ row }">
           <UTooltip :text="row.original.afterRule">
             <UBadge
-              :color="row.original.after ? 'primary' : 'error'"
+              :color="verdictBadge(row.original.after).color"
               variant="subtle"
             >
-              {{ row.original.after ? 'Allowed' : 'Blocked' }}
+              {{ verdictBadge(row.original.after).label }}
             </UBadge>
           </UTooltip>
         </template>

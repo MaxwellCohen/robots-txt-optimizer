@@ -34,18 +34,12 @@ export function isUserAgentLineContent(line: string): boolean {
   return parsed !== null && normalizeDirectiveName(parsed.name) === 'useragent'
 }
 
-function normalizeDirectiveName(name: string): string {
+export function normalizeDirectiveName(name: string): string {
   return name.toLowerCase().replace(/[\s_-]+/g, '')
 }
 
 function resolveDirectiveType(name: string): DirectiveType {
   const normalized = normalizeDirectiveName(name)
-  if (normalized === 'useragent') {
-    return 'unknown'
-  }
-  if (normalized === 'sitemap') {
-    return 'unknown'
-  }
   const mapped = DIRECTIVE_MAP[normalized]
   if (mapped) {
     return mapped
@@ -74,9 +68,8 @@ export function parseRobotsTxt(text: string): RobotsDocument {
   const sitemaps: RobotsDocument['sitemaps'] = []
   let currentGroup: UserAgentGroup | null = null
 
-  for (let i = 0; i < lines.length; i++) {
+  for (const [i, raw] of lines.entries()) {
     const lineNum = i + 1
-    const raw = lines[i]!
     const content = stripComment(raw)
 
     if (!content) {

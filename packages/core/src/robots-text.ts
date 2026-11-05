@@ -1,11 +1,7 @@
-import { stripComment } from './parse'
+import { normalizeDirectiveName, stripComment } from './parse'
 import type { RobotsDocument } from './types'
 
 const USER_AGENT_SEPARATOR_PATTERN = /[\s\u00a0\u2011\u2010\u2012\u2013\u2014-]+/g
-
-export function normalizeDirectiveName(name: string): string {
-  return name.toLowerCase().replace(/[\s_-]+/g, '')
-}
 
 export function normalizeUserAgentForLinter(value: string): string {
   const trimmed = value.trim()
@@ -28,7 +24,7 @@ export function normalizeUserAgentForMatch(value: string): string {
 
   return trimmed
     .replace(USER_AGENT_SEPARATOR_PATTERN, '_')
-    .replace(/[^0-9a-z0-9_]/g, '')
+    .replace(/[^0-9a-z_]/g, '')
 }
 
 function rewriteUserAgentLine(line: string): string {
@@ -79,31 +75,6 @@ export function textForLint(doc: RobotsDocument): string {
 
     return `# ${line}`
   }).join('\n')
-}
-
-export function textForMatching(doc: RobotsDocument): string {
-  const text = textForLint(doc)
-  const hasUserAgent = text.split(/\r?\n/).some((line) => {
-    const content = stripComment(line)
-    if (!content) {
-      return false
-    }
-    const colonIndex = content.indexOf(':')
-    if (colonIndex === -1) {
-      return false
-    }
-    return normalizeDirectiveName(content.slice(0, colonIndex).trim()) === 'useragent'
-  })
-
-  const hasPathRules = doc.groups.some(group =>
-    group.directives.some(directive => directive.type === 'allow' || directive.type === 'disallow')
-  )
-
-  if (!hasUserAgent && hasPathRules) {
-    return `User-agent: *\n${text}`
-  }
-
-  return text
 }
 
 export function userAgentMatches(ruleAgent: string, requestAgent: string): boolean {

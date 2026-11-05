@@ -1,5 +1,3 @@
-import { readFile, writeFile } from 'node:fs/promises'
-import { parseArgs } from 'node:util'
 import {
   analyzeRobotsTxt,
   applyCrawlerPolicy,
@@ -8,128 +6,22 @@ import {
   CRAWLER_CATEGORY_LABELS,
   crawlerPolicyFromPreset,
   findBlockedSitemapUrls,
-  parseRobotsTxt,
-  type CrawlerPolicyPreset,
-  type ValidationIssue
+  parseRobotsTxt
 } from '@robots-txt-optimizer/core'
-import { diagnoseFetch, fetchRobotsTxt, normalizeRobotsUrl } from '@robots-txt-optimizer/core/fetch'
+import { diagnoseFetch } from '@robots-txt-optimizer/core/fetch'
 import { secureFetchSitemaps } from '@robots-txt-optimizer/core/node'
+import { AI_PRESETS, isAiPreset, parseCliArgs, parseExpectation, UsageError, type CliValues } from './args'
+import { escapeAnnotation, HELP, printCheckText, type CheckFailure } from './format'
+import { defaultIO, loadInput, type CliIO, type LoadedInput } from './io'
 
-export interface CliIO {
-  stdout: (text: string) => void
-  stderr: (text: string) => void
-  readFile: (path: string) => Promise<string>
-  writeFile: (path: string, text: string) => Promise<void>
-  fetch: typeof globalThis.fetch
-}
+export { defaultIO, type CliIO } from './io'
 
-export const defaultIO: CliIO = {
-  stdout: text => process.stdout.write(text),
-  stderr: text => process.stderr.write(text),
-  readFile: path => readFile(path, 'utf8'),
-  writeFile: (path, text) => writeFile(path, text, 'utf8'),
-  fetch: globalThis.fetch
-}
-
-const HELP = `robots-txt-optimizer — validate, test, and optimize robots.txt
-
-Usage:
-  robots-txt-optimizer check <file|url> [options]
-  robots-txt-optimizer optimize <file|url> [--write] [--ai <preset>]
-  robots-txt-optimizer compare <before> <after> [--format text|json]
-  robots-txt-optimizer crawlers <file|url> [--format text|json]
-
-<file|url> is a local path, "-" for stdin, or a URL/domain (example.com).
-
-check options:
-  --fail-on <level>        error (default), warning, or none
-  --expect-allowed <a:p>   Fail unless user-agent <a> may crawl path <p>
-                           (repeatable), e.g. --expect-allowed "Googlebot:/blog"
-  --expect-blocked <a:p>   Fail unless user-agent <a> is blocked from <p> (repeatable)
-  --check-sitemaps         Fetch Sitemap: URLs and fail if robots.txt blocks
-                           any URL they list
-  --format <format>        text (default), json, or github (workflow annotations)
-  --path-label <name>      File name to use in github annotations
-
-optimize options:
-  --write                  Overwrite the input file instead of printing
-  --ai <preset>            Also apply an AI crawler policy:
-                           block-ai-training, block-all-ai, allow-all-ai
-
-Exit codes: 0 success, 1 check failed, 2 usage or input error.
-`
-
-const AI_PRESETS = ['block-ai-training', 'block-all-ai', 'allow-all-ai'] as const
-
-class UsageError extends Error {}
-
-interface LoadedInput {
-  text: string
-  label: string
-  /** Local file path, if the input was a file. */
-  file?: string
-  fetchStatus?: number
-}
-
-function looksLikeUrl(input: string): boolean {
-  if (/^https?:\/\//i.test(input)) {
-    return true
-  }
-  // Bare domains (example.com), but not file names such as robots.txt.
-  return /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?(\/.*)?$/i.test(input) && !/\.txt$/i.test(input)
-}
-
-async function readStdin(): Promise<string> {
-  const chunks: Buffer[] = []
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk as Buffer)
-  }
-  return Buffer.concat(chunks).toString('utf8')
-}
-
-async function loadInput(input: string, io: CliIO): Promise<LoadedInput> {
-  if (input === '-') {
-    return { text: await readStdin(), label: 'stdin' }
-  }
-
-  try {
-    return { text: await io.readFile(input), label: input, file: input }
-  } catch (err) {
-    const missing = (err as NodeJS.ErrnoException).code === 'ENOENT'
-    if (!missing || !looksLikeUrl(input)) {
-      throw new UsageError(missing ? `File not found: ${input}` : `Cannot read ${input}: ${(err as Error).message}`)
-    }
-  }
-
-  const url = normalizeRobotsUrl(input)
-  const result = await fetchRobotsTxt(url, { fetch: io.fetch, userAgent: 'robots-txt-optimizer-cli/1.0', source: 'server' })
-  return { text: result.status >= 200 && result.status < 300 ? result.text : '', label: result.finalUrl, fetchStatus: result.status }
-}
-
-function parseExpectation(value: string): { agent: string, path: string } {
-  const index = value.indexOf(':')
-  if (index <= 0 || index === value.length - 1) {
-    throw new UsageError(`Expected "<user-agent>:<path>", got "${value}"`)
-  }
-  const path = value.slice(index + 1).trim()
-  return { agent: value.slice(0, index).trim(), path: path.startsWith('/') ? path : `/${path}` }
-}
-
-function escapeAnnotation(text: string): string {
-  return text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A')
-}
-
-interface CheckFailure {
-  message: string
-  line?: number
-}
-
-async function runCheck(input: LoadedInput, values: Record<string, unknown>, io: CliIO): Promise<number> {
-  const failOn = (values['fail-on'] as string | undefined) ?? 'error'
+async function runCheck(input: LoadedInput, values: CliValues, io: CliIO): Promise<number> {
+  const failOn = values['fail-on'] ?? 'error'
   if (!['error', 'warning', 'none'].includes(failOn)) {
     throw new UsageError(`--fail-on must be error, warning, or none (got "${failOn}")`)
   }
-  const format = (values.format as string | undefined) ?? 'text'
+  const format = values.format ?? 'text'
   if (!['text', 'json', 'github'].includes(format)) {
     throw new UsageError(`--format must be text, json, or github (got "${format}")`)
   }
@@ -155,11 +47,11 @@ async function runCheck(input: LoadedInput, values: Record<string, unknown>, io:
   failures.push(...failingIssues.map(issue => ({ message: issue.message, line: issue.line })))
 
   const expectations = [
-    ...((values['expect-allowed'] as string[] | undefined) ?? []).map(v => ({ ...parseExpectation(v), allowed: true })),
-    ...((values['expect-blocked'] as string[] | undefined) ?? []).map(v => ({ ...parseExpectation(v), allowed: false }))
+    ...(values['expect-allowed'] ?? []).map(v => ({ ...parseExpectation(v), allowed: true })),
+    ...(values['expect-blocked'] ?? []).map(v => ({ ...parseExpectation(v), allowed: false }))
   ]
   const expectationResults = expectations.map((expectation) => {
-    const result = checkRobotsPath(doc.raw, expectation.agent, expectation.path, doc)
+    const result = checkRobotsPath(doc, expectation.agent, expectation.path)
     return { ...expectation, actual: result.allowed, line: result.matchingLine, rule: result.matchedPattern }
   })
   for (const result of expectationResults) {
@@ -206,7 +98,7 @@ async function runCheck(input: LoadedInput, values: Record<string, unknown>, io:
   }
 
   if (format === 'github') {
-    const file = (values['path-label'] as string | undefined) ?? input.file ?? 'robots.txt'
+    const file = values['path-label'] ?? input.file ?? 'robots.txt'
     const annotate = (level: 'error' | 'warning' | 'notice', message: string, line?: number) =>
       io.stdout(`::${level} file=${file}${line ? `,line=${line}` : ''},title=robots.txt::${escapeAnnotation(message)}\n`)
     const failingSet = new Set(failingIssues)
@@ -222,40 +114,15 @@ async function runCheck(input: LoadedInput, values: Record<string, unknown>, io:
   return ok ? 0 : 1
 }
 
-function printCheckText(
-  io: CliIO,
-  label: string,
-  issues: ValidationIssue[],
-  failures: CheckFailure[],
-  expectationCount: number,
-  sitemapUrlsChecked: number | undefined
-) {
-  io.stdout(`robots.txt check: ${label}\n`)
-  for (const issue of issues) {
-    io.stdout(`  ${issue.severity === 'error' ? '✖' : '⚠'} ${issue.line ? `line ${issue.line}: ` : ''}${issue.message}\n`)
-  }
-  const issueMessages = new Set(issues.map(issue => issue.message))
-  for (const failure of failures.filter(f => !issueMessages.has(f.message))) {
-    io.stdout(`  ✖ ${failure.message}\n`)
-  }
-  const extras = [
-    expectationCount ? `${expectationCount} expectation(s)` : '',
-    sitemapUrlsChecked !== undefined ? `${sitemapUrlsChecked} sitemap URL(s)` : ''
-  ].filter(Boolean).join(', ')
-  io.stdout(failures.length
-    ? `\n✖ ${failures.length} problem(s) failed the check\n`
-    : `\n✔ Passed${extras ? ` (${extras})` : ''}${issues.length ? ` with ${issues.length} non-blocking issue(s)` : ''}\n`)
-}
-
-async function runOptimize(input: LoadedInput, values: Record<string, unknown>, io: CliIO): Promise<number> {
-  const preset = values.ai as string | undefined
-  if (preset && !AI_PRESETS.includes(preset as CrawlerPolicyPreset)) {
+async function runOptimize(input: LoadedInput, values: CliValues, io: CliIO): Promise<number> {
+  const preset = values.ai
+  if (preset !== undefined && !isAiPreset(preset)) {
     throw new UsageError(`--ai must be one of ${AI_PRESETS.join(', ')}`)
   }
 
   let text = analyzeRobotsTxt(input.text).optimizedText
   if (preset) {
-    text = applyCrawlerPolicy(parseRobotsTxt(text), crawlerPolicyFromPreset(preset as CrawlerPolicyPreset))
+    text = applyCrawlerPolicy(parseRobotsTxt(text), crawlerPolicyFromPreset(preset))
   }
   text = `${text.trimEnd()}\n`
 
@@ -271,7 +138,7 @@ async function runOptimize(input: LoadedInput, values: Record<string, unknown>, 
   return 0
 }
 
-async function runCompare(before: LoadedInput, after: LoadedInput, values: Record<string, unknown>, io: CliIO): Promise<number> {
+async function runCompare(before: LoadedInput, after: LoadedInput, values: CliValues, io: CliIO): Promise<number> {
   const comparison = compareRobotsTxt(before.text, after.text)
   if (values.format === 'json') {
     io.stdout(`${JSON.stringify({
@@ -304,7 +171,7 @@ async function runCompare(before: LoadedInput, after: LoadedInput, values: Recor
   return 0
 }
 
-function runCrawlers(input: LoadedInput, values: Record<string, unknown>, io: CliIO): number {
+function runCrawlers(input: LoadedInput, values: CliValues, io: CliIO): number {
   const access = analyzeRobotsTxt(input.text).crawlerAccess
   if (values.format === 'json') {
     io.stdout(`${JSON.stringify(access.map(entry => ({
@@ -329,21 +196,7 @@ function runCrawlers(input: LoadedInput, values: Record<string, unknown>, io: Cl
 
 export async function run(argv: string[], io: CliIO = defaultIO): Promise<number> {
   try {
-    const { values, positionals } = parseArgs({
-      args: argv,
-      allowPositionals: true,
-      options: {
-        'help': { type: 'boolean', short: 'h' },
-        'fail-on': { type: 'string' },
-        'expect-allowed': { type: 'string', multiple: true },
-        'expect-blocked': { type: 'string', multiple: true },
-        'check-sitemaps': { type: 'boolean' },
-        'format': { type: 'string' },
-        'path-label': { type: 'string' },
-        'write': { type: 'boolean' },
-        'ai': { type: 'string' }
-      }
-    })
+    const { values, positionals } = parseCliArgs(argv)
 
     const [command, ...args] = positionals
     if (values.help || !command) {

@@ -46,7 +46,7 @@ export function simulatePaths(
 
   for (const userAgent of userAgents) {
     for (const path of paths) {
-      const result = checkRobotsPath(doc.raw, userAgent, path, doc)
+      const result = checkRobotsPath(doc, userAgent, path)
       verdicts.push({
         userAgent,
         path,

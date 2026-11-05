@@ -419,10 +419,6 @@ var require_dist = __commonJS({
   }
 });
 
-// src/run.ts
-import { readFile, writeFile } from "node:fs/promises";
-import { parseArgs } from "node:util";
-
 // ../core/src/parse.ts
 var DIRECTIVE_MAP = {
   "allow": "allow",
@@ -459,12 +455,6 @@ function normalizeDirectiveName(name) {
 }
 function resolveDirectiveType(name) {
   const normalized = normalizeDirectiveName(name);
-  if (normalized === "useragent") {
-    return "unknown";
-  }
-  if (normalized === "sitemap") {
-    return "unknown";
-  }
   const mapped = DIRECTIVE_MAP[normalized];
   if (mapped) {
     return mapped;
@@ -488,9 +478,8 @@ function parseRobotsTxt(text) {
   const groups = [];
   const sitemaps = [];
   let currentGroup = null;
-  for (let i = 0; i < lines.length; i++) {
+  for (const [i, raw] of lines.entries()) {
     const lineNum = i + 1;
-    const raw = lines[i];
     const content = stripComment(raw);
     if (!content) {
       continue;
@@ -547,9 +536,6 @@ var import_robots_linter2 = __toESM(require_dist(), 1);
 
 // ../core/src/robots-text.ts
 var USER_AGENT_SEPARATOR_PATTERN = /[\s\u00a0\u2011\u2010\u2012\u2013\u2014-]+/g;
-function normalizeDirectiveName2(name) {
-  return name.toLowerCase().replace(/[\s_-]+/g, "");
-}
 function normalizeUserAgentForLinter(value) {
   const trimmed = value.trim();
   if (trimmed === "*") {
@@ -563,7 +549,7 @@ function normalizeUserAgentForMatch(value) {
   if (trimmed === "*") {
     return "*";
   }
-  return trimmed.replace(USER_AGENT_SEPARATOR_PATTERN, "_").replace(/[^0-9a-z0-9_]/g, "");
+  return trimmed.replace(USER_AGENT_SEPARATOR_PATTERN, "_").replace(/[^0-9a-z_]/g, "");
 }
 function rewriteUserAgentLine(line) {
   const commentIndex = line.indexOf("#");
@@ -594,7 +580,7 @@ function textForLint(doc) {
     if (colonIndex === -1) {
       return line;
     }
-    const normalized = normalizeDirectiveName2(content.slice(0, colonIndex).trim());
+    const normalized = normalizeDirectiveName(content.slice(0, colonIndex).trim());
     if (normalized === "useragent") {
       return rewriteUserAgentLine(line);
     }
@@ -615,6 +601,40 @@ function userAgentMatches(ruleAgent, requestAgent) {
 
 // ../core/src/match.ts
 var import_robots_linter = __toESM(require_dist(), 1);
+
+// ../core/src/crawlers-data.ts
+var CRAWLER_CATEGORY_LABELS = {
+  "search": "Search engines",
+  "ai-training": "AI training",
+  "ai-search": "AI search",
+  "ai-user": "AI user-triggered fetches"
+};
+var AI_TRAINING_POLICY_TOKEN = "__usage_ai-training";
+var KNOWN_CRAWLERS = [
+  { token: "Googlebot", operator: "Google", category: "search", description: "Google Search crawler" },
+  { token: "Bingbot", operator: "Microsoft", category: "search", description: "Bing Search crawler (also powers Copilot answers)" },
+  { token: "Applebot", operator: "Apple", category: "search", description: "Siri and Spotlight search crawler" },
+  { token: "DuckDuckBot", operator: "DuckDuckGo", category: "search", description: "DuckDuckGo search crawler" },
+  { token: "YandexBot", operator: "Yandex", category: "search", description: "Yandex search crawler" },
+  { token: "Baiduspider", operator: "Baidu", category: "search", description: "Baidu search crawler" },
+  { token: "GPTBot", operator: "OpenAI", category: "ai-training", description: "Collects content to train OpenAI models" },
+  { token: "ClaudeBot", operator: "Anthropic", category: "ai-training", description: "Collects content to train Anthropic models" },
+  { token: AI_TRAINING_POLICY_TOKEN, operator: "Shared (IETF AIPREF)", category: "ai-training", description: "Provider-neutral AI training preference signal (draft-kelley-aipref-training-preference-signal); `User-agent: *` groups do not apply to it", controlToken: true },
+  { token: "Google-Extended", operator: "Google", category: "ai-training", description: "Controls use of Googlebot-crawled content for Gemini training and grounding; does not affect Google Search", controlToken: true },
+  { token: "Applebot-Extended", operator: "Apple", category: "ai-training", description: "Controls use of Applebot-crawled content for Apple AI training", controlToken: true },
+  { token: "CCBot", operator: "Common Crawl", category: "ai-training", description: "Open web crawl widely used as AI training data" },
+  { token: "Meta-ExternalAgent", operator: "Meta", category: "ai-training", description: "Collects content to train Meta AI models" },
+  { token: "Bytespider", operator: "ByteDance", category: "ai-training", description: "Collects content for ByteDance AI models" },
+  { token: "Amazonbot", operator: "Amazon", category: "ai-training", description: "Amazon crawler used for Alexa and AI services" },
+  { token: "OAI-SearchBot", operator: "OpenAI", category: "ai-search", description: "Indexes pages for ChatGPT search results" },
+  { token: "Claude-SearchBot", operator: "Anthropic", category: "ai-search", description: "Indexes pages for Claude search results" },
+  { token: "PerplexityBot", operator: "Perplexity", category: "ai-search", description: "Indexes pages for Perplexity answers" },
+  { token: "ChatGPT-User", operator: "OpenAI", category: "ai-user", description: "Fetches pages when a ChatGPT user asks about them" },
+  { token: "Claude-User", operator: "Anthropic", category: "ai-user", description: "Fetches pages when a Claude user asks about them" },
+  { token: "Perplexity-User", operator: "Perplexity", category: "ai-user", description: "Fetches pages when a Perplexity user asks about them" }
+];
+
+// ../core/src/match.ts
 var DEFAULT_MATCH = {
   allowed: true,
   matchedPattern: "(default allow)",
@@ -659,7 +679,7 @@ function matchCompiledPathRules(path, rules, exclude = -1) {
       continue;
     }
     const rule = rules[index];
-    if (rule.regex.test(decoded)) {
+    if (rule?.regex.test(decoded)) {
       matches.push({ rule, index });
     }
   }
@@ -689,6 +709,9 @@ function groupMatchesUserAgent(groupAgents, userAgent, mode) {
     (agent) => !isStarUserAgent(agent) && userAgentMatches(agent, userAgent)
   );
 }
+function isPolicyToken(userAgent) {
+  return normalizeUserAgentForMatch(userAgent) === normalizeUserAgentForMatch(AI_TRAINING_POLICY_TOKEN);
+}
 function findApplicableGroups(doc, userAgent) {
   const groups = doc.groups.map((group) => ({
     group,
@@ -697,10 +720,10 @@ function findApplicableGroups(doc, userAgent) {
   const specificGroups = groups.filter(
     ({ agents }) => groupMatchesUserAgent(agents, userAgent, "specific")
   );
-  const applicable = specificGroups.length > 0 ? specificGroups : groups.filter(({ agents }) => groupMatchesUserAgent(agents, userAgent, "star"));
+  const applicable = specificGroups.length > 0 ? specificGroups : isPolicyToken(userAgent) ? [] : groups.filter(({ agents }) => groupMatchesUserAgent(agents, userAgent, "star"));
   return applicable.map(({ group }) => group);
 }
-function checkRobotsPath(robotsTxt, userAgent, path, doc = parseRobotsTxt(robotsTxt)) {
+function checkRobotsPath(doc, userAgent, path) {
   const directives = findApplicableGroups(doc, userAgent).flatMap(
     (group) => group.directives.filter((directive) => directive.type === "allow" || directive.type === "disallow")
   );
@@ -721,34 +744,6 @@ function checkRobotsPath(robotsTxt, userAgent, path, doc = parseRobotsTxt(robots
 }
 
 // ../core/src/crawlers.ts
-var CRAWLER_CATEGORY_LABELS = {
-  "search": "Search engines",
-  "ai-training": "AI training",
-  "ai-search": "AI search",
-  "ai-user": "AI user-triggered fetches"
-};
-var KNOWN_CRAWLERS = [
-  { token: "Googlebot", operator: "Google", category: "search", description: "Google Search crawler" },
-  { token: "Bingbot", operator: "Microsoft", category: "search", description: "Bing Search crawler (also powers Copilot answers)" },
-  { token: "Applebot", operator: "Apple", category: "search", description: "Siri and Spotlight search crawler" },
-  { token: "DuckDuckBot", operator: "DuckDuckGo", category: "search", description: "DuckDuckGo search crawler" },
-  { token: "YandexBot", operator: "Yandex", category: "search", description: "Yandex search crawler" },
-  { token: "Baiduspider", operator: "Baidu", category: "search", description: "Baidu search crawler" },
-  { token: "GPTBot", operator: "OpenAI", category: "ai-training", description: "Collects content to train OpenAI models" },
-  { token: "ClaudeBot", operator: "Anthropic", category: "ai-training", description: "Collects content to train Anthropic models" },
-  { token: "Google-Extended", operator: "Google", category: "ai-training", description: "Controls use of Googlebot-crawled content for Gemini training and grounding; does not affect Google Search", controlToken: true },
-  { token: "Applebot-Extended", operator: "Apple", category: "ai-training", description: "Controls use of Applebot-crawled content for Apple AI training", controlToken: true },
-  { token: "CCBot", operator: "Common Crawl", category: "ai-training", description: "Open web crawl widely used as AI training data" },
-  { token: "Meta-ExternalAgent", operator: "Meta", category: "ai-training", description: "Collects content to train Meta AI models" },
-  { token: "Bytespider", operator: "ByteDance", category: "ai-training", description: "Collects content for ByteDance AI models" },
-  { token: "Amazonbot", operator: "Amazon", category: "ai-training", description: "Amazon crawler used for Alexa and AI services" },
-  { token: "OAI-SearchBot", operator: "OpenAI", category: "ai-search", description: "Indexes pages for ChatGPT search results" },
-  { token: "Claude-SearchBot", operator: "Anthropic", category: "ai-search", description: "Indexes pages for Claude search results" },
-  { token: "PerplexityBot", operator: "Perplexity", category: "ai-search", description: "Indexes pages for Perplexity answers" },
-  { token: "ChatGPT-User", operator: "OpenAI", category: "ai-user", description: "Fetches pages when a ChatGPT user asks about them" },
-  { token: "Claude-User", operator: "Anthropic", category: "ai-user", description: "Fetches pages when a Claude user asks about them" },
-  { token: "Perplexity-User", operator: "Perplexity", category: "ai-user", description: "Fetches pages when a Perplexity user asks about them" }
-];
 var TOKEN_REPLACEMENTS = {
   anthropicai: "ClaudeBot",
   claudeweb: "ClaudeBot",
@@ -786,7 +781,7 @@ function analyzeCrawlerAccess(doc, crawlers = KNOWN_CRAWLERS) {
   return crawlers.map((crawler) => {
     const groups = findApplicableGroups(doc, crawler.token);
     const specific = groups.some((group) => group.userAgents.some((agent) => agent.trim() !== "*"));
-    const root = checkRobotsPath(doc.raw, crawler.token, "/", doc);
+    const root = checkRobotsPath(doc, crawler.token, "/");
     const hasDisallow = groups.some(
       (group) => group.directives.some((directive) => directive.type === "disallow" && directive.value !== "")
     );
@@ -810,21 +805,19 @@ function findKnownCrawler(token) {
   return KNOWN_CRAWLERS.find((crawler) => normalizeUserAgentForMatch(crawler.token) === normalized);
 }
 function levenshtein(a, b) {
-  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  let row = Array.from({ length: b.length + 1 }, (_, i) => i);
   for (let i = 1; i <= a.length; i++) {
-    let previous = row[0];
-    row[0] = i;
+    const next = [i];
     for (let j = 1; j <= b.length; j++) {
-      const current = row[j];
-      row[j] = Math.min(
-        row[j] + 1,
-        row[j - 1] + 1,
-        previous + (a[i - 1] === b[j - 1] ? 0 : 1)
-      );
-      previous = current;
+      next.push(Math.min(
+        (row[j] ?? 0) + 1,
+        (next[j - 1] ?? 0) + 1,
+        (row[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1)
+      ));
     }
+    row = next;
   }
-  return row[b.length];
+  return row[b.length] ?? 0;
 }
 function suggestCrawlerToken(agent) {
   const value = agent.trim();
@@ -894,7 +887,7 @@ function applyCrawlerPolicy(doc, policy) {
       return;
     }
     const nextGroup = doc.groups[groupIndex + 1];
-    const lastDirectiveLine = group.directives.at(-1)?.line ?? lines.at(-1).line;
+    const lastDirectiveLine = group.directives.at(-1)?.line ?? lines.at(-1)?.line ?? group.startLine;
     const end = nextGroup ? Math.min(nextGroup.startLine - 1, lastDirectiveLine) : lastDirectiveLine;
     for (let line = group.startLine; line <= end; line++) {
       removed.add(line);
@@ -916,8 +909,8 @@ ${sections.join("\n\n")}`;
   const sitemapPattern = /^\s*sitemap\s*:/i;
   const bodyLines = body.split("\n");
   const trailingSitemaps = [];
-  while (bodyLines.length && (sitemapPattern.test(bodyLines.at(-1)) || !bodyLines.at(-1).trim())) {
-    const line = bodyLines.pop();
+  for (let last = bodyLines.at(-1); last !== void 0 && (sitemapPattern.test(last) || !last.trim()); last = bodyLines.at(-1)) {
+    const line = bodyLines.pop() ?? "";
     if (line.trim()) {
       trailingSitemaps.unshift(line);
     }
@@ -929,6 +922,23 @@ ${sections.join("\n\n")}`;
   return `${parts.filter(Boolean).join("\n\n")}
 `;
 }
+
+// ../core/src/paths.ts
+var DEFAULT_USER_AGENTS = [
+  "Googlebot",
+  "Bingbot",
+  "GPTBot",
+  "*"
+];
+var DEFAULT_PATHS = [
+  "/",
+  "/admin",
+  "/api/",
+  "/search",
+  "/private/",
+  "/blog/post-1"
+];
+var CHECK_AGENTS = ["Googlebot", "Bingbot"];
 
 // ../core/src/checks.ts
 var RENDER_RESOURCE_PATHS = [
@@ -947,7 +957,6 @@ var RENDER_RESOURCE_PATHS = [
   "/wp-content/plugins/plugin/script.js",
   "/cdn/shop/t/1/assets/theme.js"
 ];
-var RENDER_CHECK_AGENTS = ["Googlebot", "Bingbot"];
 function crawlerTokenIssues(doc) {
   const issues = [];
   for (const { agent, line } of collectUserAgentLines(doc)) {
@@ -963,8 +972,8 @@ function crawlerTokenIssues(doc) {
   return issues;
 }
 function siteBlockIssues(doc) {
-  const root = checkRobotsPath(doc.raw, "*", "/", doc);
-  const google = checkRobotsPath(doc.raw, "Googlebot", "/", doc);
+  const root = checkRobotsPath(doc, "*", "/");
+  const google = checkRobotsPath(doc, "Googlebot", "/");
   const issues = [];
   if (!root.allowed) {
     issues.push({
@@ -983,12 +992,12 @@ function siteBlockIssues(doc) {
 }
 function renderResourceIssues(doc) {
   const byLine = /* @__PURE__ */ new Map();
-  for (const agent of RENDER_CHECK_AGENTS) {
-    if (!checkRobotsPath(doc.raw, agent, "/", doc).allowed) {
+  for (const agent of CHECK_AGENTS) {
+    if (!checkRobotsPath(doc, agent, "/").allowed) {
       continue;
     }
     for (const path of RENDER_RESOURCE_PATHS) {
-      const result = checkRobotsPath(doc.raw, agent, path, doc);
+      const result = checkRobotsPath(doc, agent, path);
       if (result.allowed || result.matchingLine === 0) {
         continue;
       }
@@ -1013,7 +1022,7 @@ function controlTokenIssues(doc) {
   for (const { agent, line } of collectUserAgentLines(doc)) {
     const crawler = findKnownCrawler(agent);
     if (crawler?.token === "Google-Extended") {
-      const google = checkRobotsPath(doc.raw, "Googlebot", "/", doc);
+      const google = checkRobotsPath(doc, "Googlebot", "/");
       if (!google.allowed) {
         issues.push({
           severity: "warning",
@@ -1061,24 +1070,10 @@ function issueFromParseError(err, doc) {
     line
   };
 }
-function directiveNameAtLine(doc, lineNum) {
-  const raw = doc.lines[lineNum - 1];
-  if (raw === void 0) {
-    return void 0;
-  }
-  const content = stripComment(raw);
-  const colonIndex = content.indexOf(":");
-  if (colonIndex === -1) {
-    return void 0;
-  }
-  const name = content.slice(0, colonIndex).trim();
-  return name || void 0;
-}
 function collectDirectiveWarnings(doc) {
   const issues = [];
-  for (let i = 0; i < doc.lines.length; i++) {
+  for (const [i, raw] of doc.lines.entries()) {
     const lineNum = i + 1;
-    const raw = doc.lines[i];
     const content = stripComment(raw);
     if (!content) {
       continue;
@@ -1100,7 +1095,7 @@ function collectDirectiveWarnings(doc) {
       continue;
     }
     const name = content.slice(0, colonIndex).trim();
-    const normalized = normalizeDirectiveName2(name);
+    const normalized = normalizeDirectiveName(name);
     if (normalized === "disalow" || normalized === "dissallow") {
       issues.push({
         severity: "warning",
@@ -1108,17 +1103,13 @@ function collectDirectiveWarnings(doc) {
         line: lineNum
       });
     }
-    if (normalized === "useragent" || normalized === "sitemap") {
-      continue;
-    }
-    if (normalized === "allow" || normalized === "disallow") {
+    if (normalized === "useragent" || normalized === "sitemap" || normalized === "allow" || normalized === "disallow") {
       continue;
     }
     if (NON_RFC_DIRECTIVES.has(normalized)) {
-      const directiveName = directiveNameAtLine(doc, lineNum) ?? name;
       issues.push({
         severity: "warning",
-        message: `Directive "${directiveName}" is recognized but not part of RFC 9309 (may be ignored by crawlers)`,
+        message: `Directive "${name}" is recognized but not part of RFC 9309 (may be ignored by crawlers)`,
         line: lineNum
       });
       continue;
@@ -1133,8 +1124,7 @@ function collectDirectiveWarnings(doc) {
 }
 function collectSemanticIssues(doc) {
   const issues = [];
-  for (let gi = 0; gi < doc.groups.length; gi++) {
-    const group = doc.groups[gi];
+  for (const group of doc.groups) {
     if (group.userAgents.length === 0 && group.directives.length > 0) {
       issues.push({
         severity: "warning",
@@ -1231,22 +1221,6 @@ function validateRobotsDocument(doc) {
   return { ok, issues: deduped };
 }
 
-// ../core/src/paths.ts
-var DEFAULT_USER_AGENTS = [
-  "Googlebot",
-  "Bingbot",
-  "GPTBot",
-  "*"
-];
-var DEFAULT_PATHS = [
-  "/",
-  "/admin",
-  "/api/",
-  "/search",
-  "/private/",
-  "/blog/post-1"
-];
-
 // ../core/src/analyze.ts
 function summarizeDirectives(doc) {
   return doc.groups.map((group, groupIndex) => {
@@ -1280,7 +1254,7 @@ function simulatePaths(doc, userAgents = DEFAULT_USER_AGENTS, paths = DEFAULT_PA
   const verdicts = [];
   for (const userAgent of userAgents) {
     for (const path of paths) {
-      const result = checkRobotsPath(doc.raw, userAgent, path, doc);
+      const result = checkRobotsPath(doc, userAgent, path);
       verdicts.push({
         userAgent,
         path,
@@ -1294,106 +1268,7 @@ function simulatePaths(doc, userAgents = DEFAULT_USER_AGENTS, paths = DEFAULT_PA
   return verdicts;
 }
 
-// ../core/src/optimize.ts
-function directiveKey(d) {
-  return `${d.type}:${d.value}`;
-}
-function groupSignature(group) {
-  const agents = [...group.userAgents].sort().join("|");
-  const rules = group.directives.map(directiveKey).join("|");
-  return `${agents}::${rules}`;
-}
-function findDuplicateDirectives(doc) {
-  const suggestions = [];
-  for (let gi = 0; gi < doc.groups.length; gi++) {
-    const group = doc.groups[gi];
-    const seen = /* @__PURE__ */ new Map();
-    for (const directive of group.directives) {
-      if (directive.type !== "allow" && directive.type !== "disallow") {
-        continue;
-      }
-      const key = directiveKey(directive);
-      if (seen.has(key)) {
-        suggestions.push({
-          type: "duplicate_directive",
-          message: `Duplicate ${directive.type} rule "${directive.value}" in group for ${group.userAgents.join(", ") || "unknown agent"}`,
-          lines: [directive.line],
-          groupIndex: gi
-        });
-      } else {
-        seen.set(key, directive.line);
-      }
-    }
-  }
-  return suggestions;
-}
-function findMissingUserAgent(doc) {
-  return doc.groups.flatMap((group, gi) => {
-    if (group.userAgents.length === 0 && group.directives.length > 0) {
-      return [{
-        type: "missing_user_agent",
-        message: "Add `User-agent: *` before these directives \u2014 rules without a user-agent may be ignored by crawlers",
-        lines: [group.startLine],
-        groupIndex: gi
-      }];
-    }
-    return [];
-  });
-}
-function findEmptyGroups(doc) {
-  return doc.groups.flatMap((group, gi) => {
-    if (group.userAgents.length > 0 && group.directives.length === 0) {
-      return [{
-        type: "empty_group",
-        message: `Group for ${group.userAgents.join(", ")} has no directives`,
-        lines: [group.startLine],
-        groupIndex: gi
-      }];
-    }
-    return [];
-  });
-}
-function findDuplicateGroups(doc) {
-  const signatures = /* @__PURE__ */ new Map();
-  const suggestions = [];
-  for (let gi = 0; gi < doc.groups.length; gi++) {
-    const group = doc.groups[gi];
-    if (group.userAgents.length === 0) {
-      continue;
-    }
-    const sig = groupSignature(group);
-    const existing = signatures.get(sig);
-    if (existing !== void 0) {
-      suggestions.push({
-        type: "duplicate_group",
-        message: `Group for ${group.userAgents.join(", ")} duplicates group starting at line ${doc.groups[existing].startLine}`,
-        lines: [group.startLine],
-        groupIndex: gi
-      });
-    } else {
-      signatures.set(sig, gi);
-    }
-  }
-  return suggestions;
-}
-function findRedundantCatchall(doc) {
-  const catchall = doc.groups.find((g) => g.userAgents.some((a) => a === "*"));
-  if (!catchall) {
-    return [];
-  }
-  const specificAgents = new Set(
-    doc.groups.filter((g) => !g.userAgents.includes("*")).flatMap((g) => g.userAgents)
-  );
-  if (specificAgents.size === 0) {
-    return [];
-  }
-  return [{
-    type: "redundant_catchall",
-    message: `Catch-all User-agent: * group may be redundant \u2014 ${specificAgents.size} specific user-agent group(s) already defined`,
-    lines: [catchall.startLine],
-    groupIndex: doc.groups.indexOf(catchall)
-  }];
-}
+// ../core/src/optimize/probing.ts
 function pathsFromPattern(pattern) {
   if (!pattern) {
     return [];
@@ -1467,6 +1342,105 @@ function probePathsForDirective(pattern, otherPatterns, basePaths) {
   }
   return [...probes];
 }
+
+// ../core/src/optimize/detectors.ts
+function directiveKey(d) {
+  return `${d.type}:${d.value}`;
+}
+function groupSignature(group) {
+  const agents = [...group.userAgents].sort().join("|");
+  const rules = group.directives.map(directiveKey).join("|");
+  return `${agents}::${rules}`;
+}
+function findDuplicateDirectives(doc) {
+  const suggestions = [];
+  for (const [gi, group] of doc.groups.entries()) {
+    const seen = /* @__PURE__ */ new Map();
+    for (const directive of group.directives) {
+      if (directive.type !== "allow" && directive.type !== "disallow") {
+        continue;
+      }
+      const key = directiveKey(directive);
+      if (seen.has(key)) {
+        suggestions.push({
+          type: "duplicate_directive",
+          message: `Duplicate ${directive.type} rule "${directive.value}" in group for ${group.userAgents.join(", ") || "unknown agent"}`,
+          lines: [directive.line],
+          groupIndex: gi
+        });
+      } else {
+        seen.set(key, directive.line);
+      }
+    }
+  }
+  return suggestions;
+}
+function findMissingUserAgent(doc) {
+  return doc.groups.flatMap((group, gi) => {
+    if (group.userAgents.length === 0 && group.directives.length > 0) {
+      return [{
+        type: "missing_user_agent",
+        message: "Add `User-agent: *` before these directives \u2014 rules without a user-agent may be ignored by crawlers",
+        lines: [group.startLine],
+        groupIndex: gi
+      }];
+    }
+    return [];
+  });
+}
+function findEmptyGroups(doc) {
+  return doc.groups.flatMap((group, gi) => {
+    if (group.userAgents.length > 0 && group.directives.length === 0) {
+      return [{
+        type: "empty_group",
+        message: `Group for ${group.userAgents.join(", ")} has no directives`,
+        lines: [group.startLine],
+        groupIndex: gi
+      }];
+    }
+    return [];
+  });
+}
+function findDuplicateGroups(doc) {
+  const signatures = /* @__PURE__ */ new Map();
+  const suggestions = [];
+  for (const [gi, group] of doc.groups.entries()) {
+    if (group.userAgents.length === 0) {
+      continue;
+    }
+    const sig = groupSignature(group);
+    const existing = signatures.get(sig);
+    if (existing !== void 0) {
+      suggestions.push({
+        type: "duplicate_group",
+        message: `Group for ${group.userAgents.join(", ")} duplicates group starting at line ${doc.groups[existing]?.startLine}`,
+        lines: [group.startLine],
+        groupIndex: gi
+      });
+    } else {
+      signatures.set(sig, gi);
+    }
+  }
+  return suggestions;
+}
+function findRedundantCatchall(doc) {
+  const catchall = doc.groups.find((g) => g.userAgents.some((a) => a === "*"));
+  if (!catchall) {
+    return [];
+  }
+  const specificAgents = new Set(
+    doc.groups.filter((g) => !g.userAgents.includes("*")).flatMap((g) => g.userAgents)
+  );
+  if (specificAgents.size === 0) {
+    return [];
+  }
+  return [{
+    type: "redundant_catchall",
+    message: `Catch-all User-agent: * group may be redundant \u2014 ${specificAgents.size} specific user-agent group(s) already defined`,
+    lines: [catchall.startLine],
+    groupIndex: doc.groups.indexOf(catchall)
+  }];
+}
 function formatPathDirective(directive) {
   const label = directive.type === "allow" ? "Allow" : "Disallow";
   return `${label}: ${directive.value}`;
@@ -1501,11 +1475,9 @@ function supersedingDirective(pathDirectives, rules, deadRuleIndex, removed) {
 function findDeadRules(doc) {
   const suggestions = [];
   const baseProbePaths = [...DEFAULT_PATHS, "/test-dead-rule-probe/"];
-  for (let gi = 0; gi < doc.groups.length; gi++) {
-    const group = doc.groups[gi];
+  for (const [gi, group] of doc.groups.entries()) {
     const pathDirectives = [];
-    for (let index = 0; index < group.directives.length; index++) {
-      const directive = group.directives[index];
+    for (const [index, directive] of group.directives.entries()) {
       if (directive.type === "allow" || directive.type === "disallow") {
         pathDirectives.push({ d: directive, index });
       }
@@ -1560,6 +1532,8 @@ function suggestOptimizations(doc) {
     ...findRedundantCatchall(doc)
   ];
 }
+
+// ../core/src/optimize/rewrite.ts
 function removeLinesFromDocument(doc, linesToRemove) {
   const newGroups = [];
   for (const group of doc.groups) {
@@ -1634,8 +1608,7 @@ function computeRemovedLines(doc, optimized) {
       removed.add(sitemap.line);
     }
   }
-  for (let groupIndex = 0; groupIndex < doc.groups.length; groupIndex++) {
-    const group = doc.groups[groupIndex];
+  for (const [groupIndex, group] of doc.groups.entries()) {
     if (keptGroupStartLines.has(group.startLine)) {
       continue;
     }
@@ -1685,14 +1658,14 @@ function formatOptimizedFromOriginal(doc, optimized) {
   const removed = computeRemovedLines(doc, optimized);
   const insertions = computeInsertions(doc, optimized);
   const output = [];
-  for (let index = 0; index < doc.lines.length; index++) {
+  for (const [index, line] of doc.lines.entries()) {
     const lineNum = index + 1;
     const toInsert = insertions.get(lineNum);
     if (toInsert) {
       output.push(...toInsert);
     }
     if (!removed.has(lineNum)) {
-      output.push(doc.lines[index]);
+      output.push(line);
     }
   }
   return output.join("\n").trimEnd();
@@ -1809,8 +1782,8 @@ function compareRobotsTxt(beforeText, afterText, options = {}) {
   const verdictChanges = [];
   for (const userAgent of userAgents) {
     for (const path of paths) {
-      const a = checkRobotsPath(beforeText, userAgent, path, before);
-      const b = checkRobotsPath(afterText, userAgent, path, after);
+      const a = checkRobotsPath(before, userAgent, path);
+      const b = checkRobotsPath(after, userAgent, path);
       if (a.allowed !== b.allowed) {
         verdictChanges.push({
           userAgent,
@@ -1829,7 +1802,7 @@ function compareRobotsTxt(beforeText, afterText, options = {}) {
   const afterAccess = analyzeCrawlerAccess(after);
   const crawlerChanges = beforeAccess.flatMap((entry, index) => {
     const next = afterAccess[index];
-    return entry.status === next.status ? [] : [{ crawler: entry.crawler, before: entry.status, after: next.status }];
+    return !next || entry.status === next.status ? [] : [{ crawler: entry.crawler, before: entry.status, after: next.status }];
   });
   return {
     diff: diffLines(beforeText, afterText),
@@ -1840,105 +1813,6 @@ function compareRobotsTxt(beforeText, afterText, options = {}) {
   };
 }
 
-// ../core/src/templates.ts
-var SITEMAP = "Sitemap: https://example.com/sitemap.xml";
-var ALLOW_ALL = `User-agent: *
-Allow: /
-
-${SITEMAP}
-`;
-var BASE_TEMPLATES = [
-  {
-    id: "allow-all",
-    name: "Allow everything",
-    description: "Let every crawler access the whole site and point them to your sitemap",
-    text: ALLOW_ALL
-  },
-  {
-    id: "staging",
-    name: "Staging / block everything",
-    description: "Keep a staging or preview environment out of every crawler. Never ship this to production.",
-    text: `# Staging environment \u2014 do not deploy to production
-User-agent: *
-Disallow: /
-`
-  },
-  {
-    id: "wordpress",
-    name: "WordPress",
-    description: "Block the admin area and internal search while keeping admin-ajax and theme assets crawlable",
-    text: `User-agent: *
-Disallow: /wp-admin/
-Allow: /wp-admin/admin-ajax.php
-Disallow: /?s=
-Disallow: /search/
-
-Sitemap: https://example.com/wp-sitemap.xml
-`
-  },
-  {
-    id: "shopify",
-    name: "Shopify",
-    description: "Shopify defaults for cart, checkout, account, and faceted collection URLs (edit via robots.txt.liquid)",
-    text: `User-agent: *
-Disallow: /admin
-Disallow: /cart
-Disallow: /orders
-Disallow: /checkouts/
-Disallow: /checkout
-Disallow: /account
-Disallow: /search
-Disallow: /collections/*sort_by*
-Disallow: /collections/*+*
-Disallow: /collections/*%2B*
-Disallow: /*/collections/*sort_by*
-Disallow: /policies/
-Disallow: /*preview_theme_id*
-Disallow: /*preview_script_id*
-
-${SITEMAP}
-`
-  },
-  {
-    id: "nextjs",
-    name: "Next.js",
-    description: "Block API routes but keep /_next/ assets crawlable so pages render (or generate from app/robots.ts)",
-    text: `User-agent: *
-Allow: /
-Disallow: /api/
-
-${SITEMAP}
-`
-  },
-  {
-    id: "nuxt",
-    name: "Nuxt",
-    description: "Block server API routes but keep /_nuxt/ assets crawlable (or manage with @nuxtjs/robots)",
-    text: `User-agent: *
-Allow: /
-Disallow: /api/
-
-${SITEMAP}
-`
-  },
-  {
-    id: "ecommerce",
-    name: "E-commerce",
-    description: "Keep product and category pages crawlable while blocking cart, checkout, and infinite filter URLs",
-    text: `User-agent: *
-Disallow: /cart
-Disallow: /checkout
-Disallow: /account
-Disallow: /search
-Disallow: /*?*sort=
-Disallow: /*?*filter=
-Disallow: /*?*sessionid=
-
-${SITEMAP}
-`
-  }
-];
-
 // ../core/src/sitemap.ts
 var ENTITIES = {
   amp: "&",
@@ -1948,11 +1822,13 @@ var ENTITIES = {
   apos: "'"
 };
 function decodeXmlText(value) {
-  const cdata = value.match(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/);
-  const text = cdata ? cdata[1] : value;
-  return text.replace(/&(amp|lt|gt|quot|apos);/g, (_, name) => ENTITIES[name]).replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16))).replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec))).trim();
+  return value.replace(/&(amp|lt|gt|quot|apos);/g, (_, name) => ENTITIES[name] ?? "").replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16))).replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec))).trim();
 }
-function parseSitemapXml(xml) {
+function neutralizeXml(xml) {
+  return xml.replace(/<!\[CDATA\[([\s\S]*?)\]\]>|<!--[\s\S]*?-->/g, (_, cdata) => cdata === void 0 ? "" : cdata.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"));
+}
+function parseSitemapXml(rawXml) {
+  const xml = neutralizeXml(rawXml);
   const root = xml.match(/<(?:[\w-]+:)?(urlset|sitemapindex)[\s>]/i);
   if (!root) {
     return { kind: "invalid", locs: [] };
@@ -1960,14 +1836,14 @@ function parseSitemapXml(xml) {
   const locs = [];
   const locPattern = /<(?:[\w-]+:)?loc>([\s\S]*?)<\/(?:[\w-]+:)?loc>/gi;
   for (const match of xml.matchAll(locPattern)) {
-    const loc = decodeXmlText(match[1]);
+    const loc = decodeXmlText(match[1] ?? "");
     if (loc) {
       locs.push(loc);
     }
   }
-  return { kind: root[1].toLowerCase(), locs };
+  return { kind: root[1]?.toLowerCase(), locs };
 }
-var SITEMAP_CHECK_AGENTS = ["Googlebot", "Bingbot"];
+var SITEMAP_CHECK_AGENTS = CHECK_AGENTS;
 function pathOf(url) {
   try {
     const parsed = new URL(url);
@@ -1984,7 +1860,7 @@ function findBlockedSitemapUrls(doc, urls, userAgents = SITEMAP_CHECK_AGENTS) {
       continue;
     }
     for (const userAgent of userAgents) {
-      const result = checkRobotsPath(doc.raw, userAgent, path, doc);
+      const result = checkRobotsPath(doc, userAgent, path);
       if (!result.allowed) {
         conflicts.push({
           url,
@@ -2020,30 +1896,80 @@ function analyzeRobotsTxt(text) {
 }
 
 // ../core/src/fetch/errors.ts
-var RobotsUrlError = class extends Error {
+var RobotsToolError = class extends Error {
   code;
-  constructor(message, code) {
-    super(message);
+  constructor(message, code, options) {
+    super(message, options);
+    this.code = code;
+  }
+};
+var RobotsUrlError = class extends RobotsToolError {
+  constructor(message, code, options) {
+    super(message, code, options);
     this.name = "RobotsUrlError";
-    this.code = code;
   }
 };
-var RobotsFetchSecurityError = class extends Error {
-  code;
-  constructor(message, code) {
-    super(message);
+var RobotsFetchSecurityError = class extends RobotsToolError {
+  constructor(message, code, options) {
+    super(message, code, options);
     this.name = "RobotsFetchSecurityError";
-    this.code = code;
   }
 };
-var RobotsFetchError = class extends Error {
-  code;
-  constructor(message, code) {
-    super(message);
+var RobotsFetchError = class extends RobotsToolError {
+  constructor(message, code, options) {
+    super(message, code, options);
     this.name = "RobotsFetchError";
-    this.code = code;
   }
 };
+
+// ../core/src/fetch/read-capped.ts
+var BodyTooLargeError = class extends Error {
+  maxBytes;
+  constructor(maxBytes) {
+    super(`Response body is larger than ${maxBytes} bytes`);
+    this.name = "BodyTooLargeError";
+    this.maxBytes = maxBytes;
+  }
+};
+async function readBodyCapped(response, maxBytes, signal) {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return new Uint8Array();
+  }
+  const onAbort = () => {
+    reader.cancel().catch(() => {
+    });
+  };
+  signal?.addEventListener("abort", onAbort, { once: true });
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (signal?.aborted) {
+        throw signal.reason ?? new DOMException("The operation was aborted", "AbortError");
+      }
+      if (done) {
+        break;
+      }
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new BodyTooLargeError(maxBytes);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
 
 // ../core/src/fetch/fetch-robots.ts
 var DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
@@ -2070,13 +1996,9 @@ async function fetchRobotsTxt(url, options = {}) {
     if (contentLength > maxBytes) {
       throw new RobotsFetchError("robots.txt response is too large", "TOO_LARGE");
     }
-    const buffer = await response.arrayBuffer();
-    if (buffer.byteLength > maxBytes) {
-      throw new RobotsFetchError("robots.txt response is too large", "TOO_LARGE");
-    }
-    const bytes = new Uint8Array(buffer);
+    const bytes = await readBodyCapped(response, maxBytes, controller.signal);
     const hasBom = bytes[0] === 239 && bytes[1] === 187 && bytes[2] === 191;
-    const text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
+    const text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
     const finalUrl = response.url || url.toString();
     return {
       text,
@@ -2085,15 +2007,18 @@ async function fetchRobotsTxt(url, options = {}) {
       contentType: response.headers.get("content-type"),
       source,
       redirected: response.redirected || finalUrl !== url.toString(),
-      bytes: buffer.byteLength,
+      bytes: bytes.byteLength,
       hasBom
     };
   } catch (err) {
     if (err instanceof RobotsFetchError) {
       throw err;
     }
-    if (err instanceof Error && err.name === "AbortError") {
-      throw new RobotsFetchError("Request timed out", "TIMEOUT");
+    if (err instanceof BodyTooLargeError) {
+      throw new RobotsFetchError("robots.txt response is too large", "TOO_LARGE", { cause: err });
+    }
+    if (err instanceof Error && (err.name === "AbortError" || err.name === "TimeoutError")) {
+      throw new RobotsFetchError("Request timed out", "TIMEOUT", { cause: err });
     }
     throw err;
   } finally {
@@ -2121,7 +2046,7 @@ function normalizeRobotsUrl(input) {
   if (!["http:", "https:"].includes(parsed.protocol)) {
     throw new RobotsUrlError("Only http and https URLs are allowed", "UNSUPPORTED_PROTOCOL");
   }
-  if (parsed.pathname === "/" || !parsed.pathname.endsWith("robots.txt")) {
+  if (parsed.pathname.split("/").pop() !== "robots.txt") {
     parsed.pathname = "/robots.txt";
     parsed.search = "";
     parsed.hash = "";
@@ -2231,148 +2156,95 @@ function diagnoseFetch(result, requestedUrl) {
   return diagnostics;
 }
 
-// ../core/src/fetch/node.ts
-import { isIP } from "node:net";
+// ../core/src/fetch/guarded-fetch.ts
+import { isIP as isIP2 } from "node:net";
 import { lookup } from "node:dns/promises";
 
-// ../core/src/fetch/sitemap-node.ts
-import { gunzipSync } from "node:zlib";
-var DEFAULTS = {
-  maxSitemaps: 10,
-  maxUrls: 5e3,
-  maxBytes: 10 * 1024 * 1024,
-  timeoutMs: 1e4
-};
-function isGzip(bytes) {
-  return bytes[0] === 31 && bytes[1] === 139;
+// ../core/src/fetch/ip.ts
+import { isIP } from "node:net";
+function parseIPv4(ip) {
+  const parts = ip.split(".");
+  if (parts.length !== 4) {
+    return null;
+  }
+  const octets = parts.map((part) => /^\d{1,3}$/.test(part) ? Number(part) : Number.NaN);
+  if (octets.some((n) => !(n >= 0 && n <= 255))) {
+    return null;
+  }
+  return octets;
 }
-async function readCapped(response, maxBytes) {
-  const reader = response.body?.getReader();
-  if (!reader) {
-    return new Uint8Array();
-  }
-  const chunks = [];
-  let total = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
+function parseIPv6(ip) {
+  let address = ip.split("%")[0];
+  const embedded = address.match(/^(.*:)(\d+\.\d+\.\d+\.\d+)$/);
+  if (embedded) {
+    const v4 = parseIPv4(embedded[2]);
+    if (!v4) {
+      return null;
     }
-    total += value.byteLength;
-    if (total > maxBytes) {
-      await reader.cancel();
-      throw new Error(`Sitemap is larger than ${Math.round(maxBytes / 1024 / 1024)} MiB`);
-    }
-    chunks.push(value);
+    address = `${embedded[1]}${(v4[0] << 8 | v4[1]).toString(16)}:${(v4[2] << 8 | v4[3]).toString(16)}`;
   }
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
+  const halves = address.split("::");
+  if (halves.length > 2) {
+    return null;
   }
-  return bytes;
+  const toGroups = (part) => part ? part.split(":") : [];
+  const head = toGroups(halves[0]);
+  const tail = halves.length === 2 ? toGroups(halves[1]) : [];
+  const missing = 8 - head.length - tail.length;
+  if (halves.length === 1 ? missing !== 0 : missing < 1) {
+    return null;
+  }
+  const groups = [...head, ...Array.from({ length: halves.length === 2 ? missing : 0 }, () => "0"), ...tail];
+  const values = groups.map((group) => /^[0-9a-f]{1,4}$/i.test(group) ? Number.parseInt(group, 16) : Number.NaN);
+  return values.length === 8 && values.every((n) => !Number.isNaN(n)) ? values : null;
 }
-async function secureFetchSitemaps(sitemapUrls, options = {}) {
-  const limits = { ...DEFAULTS, ...options };
-  const fetchImpl = options.allowPrivateHosts ? options.fetch ?? globalThis.fetch : createGuardedFetch(options.fetch);
-  const queue = [...new Set(sitemapUrls)];
-  const visited = /* @__PURE__ */ new Set();
-  const urls = /* @__PURE__ */ new Set();
-  const sitemaps = [];
-  let truncated = false;
-  while (queue.length > 0) {
-    if (sitemaps.length >= limits.maxSitemaps || urls.size >= limits.maxUrls) {
-      truncated = true;
-      break;
-    }
-    const url = queue.shift();
-    if (visited.has(url)) {
-      continue;
-    }
-    visited.add(url);
-    const entry = { url, status: null, kind: null, urlCount: 0 };
-    sitemaps.push(entry);
-    try {
-      const response = await fetchImpl(url, {
-        headers: { "Accept": "application/xml,text/xml,*/*", "User-Agent": SERVER_USER_AGENT },
-        signal: AbortSignal.timeout(limits.timeoutMs)
-      });
-      entry.status = response.status;
-      if (!response.ok) {
-        await response.body?.cancel();
-        entry.error = `HTTP ${response.status}`;
-        continue;
-      }
-      let bytes = await readCapped(response, limits.maxBytes);
-      if (isGzip(bytes)) {
-        bytes = gunzipSync(bytes, { maxOutputLength: limits.maxBytes });
-      }
-      const parsed = parseSitemapXml(new TextDecoder().decode(bytes));
-      entry.kind = parsed.kind;
-      if (parsed.kind === "invalid") {
-        entry.error = "Not a sitemap: expected <urlset> or <sitemapindex>";
-      } else if (parsed.kind === "sitemapindex") {
-        entry.urlCount = parsed.locs.length;
-        queue.push(...parsed.locs.filter((loc) => !visited.has(loc)));
-      } else {
-        entry.urlCount = parsed.locs.length;
-        for (const loc of parsed.locs) {
-          if (urls.size >= limits.maxUrls) {
-            truncated = true;
-            break;
-          }
-          urls.add(loc);
-        }
-      }
-    } catch (err) {
-      entry.error = err instanceof Error ? err.name === "TimeoutError" ? "Request timed out" : err.message : "Failed to fetch sitemap";
-    }
+function isPrivateIPv4([a, b, c]) {
+  return a === 0 || a === 10 || a === 100 && b >= 64 && b <= 127 || a === 127 || a === 169 && b === 254 || a === 172 && b >= 16 && b <= 31 || a === 192 && b === 0 && (c === 0 || c === 2) || a === 192 && b === 168 || a === 198 && (b === 18 || b === 19) || a === 198 && b === 51 && c === 100 || a === 203 && b === 0 && c === 113 || a >= 224;
+}
+function ipv4FromGroups(high, low) {
+  return [high >> 8, high & 255, low >> 8, low & 255];
+}
+function isPrivateIPv6(g) {
+  const [g0, g1, g2, g3, g4, g5, g6, g7] = g;
+  const upperZero = g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0;
+  if (upperZero && g5 === 0) {
+    return true;
   }
-  if (queue.some((url) => !visited.has(url))) {
-    truncated = true;
+  if (upperZero && g5 === 65535) {
+    return isPrivateIPv4(ipv4FromGroups(g6, g7));
   }
-  return { sitemaps, urls: [...urls], truncated };
+  if (g0 === 100 && g1 === 65435 && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0) {
+    return isPrivateIPv4(ipv4FromGroups(g6, g7));
+  }
+  if (g0 === 8194) {
+    return isPrivateIPv4(ipv4FromGroups(g1, g2));
+  }
+  return (g0 & 65024) === 64512 || (g0 & 65472) === 65152 || (g0 & 65472) === 65216 || (g0 & 65280) === 65280 || g0 === 8193 && g1 === 3512;
+}
+function isPrivateIp(ip) {
+  const address = ip.replace(/^\[|\]$/g, "");
+  const family = isIP(address);
+  if (family === 4) {
+    const parsed = parseIPv4(address);
+    return parsed ? isPrivateIPv4(parsed) : true;
+  }
+  if (family === 6) {
+    const parsed = parseIPv6(address);
+    return parsed ? isPrivateIPv6(parsed) : true;
+  }
+  return true;
 }
 
-// ../core/src/fetch/node.ts
-function isPrivateIp(ip) {
-  if (ip === "::1" || ip === "127.0.0.1" || ip === "0.0.0.0") {
-    return true;
-  }
-  if (isIP(ip) === 6) {
-    const normalized = ip.toLowerCase();
-    if (normalized.startsWith("fc") || normalized.startsWith("fd")) {
-      return true;
-    }
-    if (normalized.startsWith("fe80")) {
-      return true;
-    }
-    return false;
-  }
-  const parts = ip.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) {
-    return true;
-  }
-  const a = parts[0];
-  const b = parts[1];
-  if (a === 10) return true;
-  if (a === 127) return true;
-  if (a === 0) return true;
-  if (a === 169 && b === 254) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 192 && b === 168) return true;
-  return false;
-}
+// ../core/src/fetch/guarded-fetch.ts
 async function assertPublicHost(url) {
-  const hostname = url.hostname.toLowerCase();
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".local")) {
     throw new RobotsFetchSecurityError(
       "Requests to local hosts are not allowed",
       "LOCAL_HOST"
     );
   }
-  if (isIP(hostname)) {
+  if (isIP2(hostname)) {
     if (isPrivateIp(hostname)) {
       throw new RobotsFetchSecurityError(
         "Requests to private IP addresses are not allowed",
@@ -2418,14 +2290,117 @@ function createGuardedFetch(baseFetch = globalThis.fetch) {
 }
 var SERVER_USER_AGENT = "robots-txt-optimizer/1.0";
 
-// src/run.ts
-var defaultIO = {
-  stdout: (text) => process.stdout.write(text),
-  stderr: (text) => process.stderr.write(text),
-  readFile: (path) => readFile(path, "utf8"),
-  writeFile: (path, text) => writeFile(path, text, "utf8"),
-  fetch: globalThis.fetch
+// ../core/src/fetch/sitemap-node.ts
+import { promisify } from "node:util";
+import { gunzip } from "node:zlib";
+var DEFAULTS = {
+  maxSitemaps: 10,
+  maxUrls: 5e3,
+  maxBytes: 10 * 1024 * 1024,
+  timeoutMs: 1e4
 };
+var gunzipAsync = promisify(gunzip);
+function isGzip(bytes) {
+  return bytes[0] === 31 && bytes[1] === 139;
+}
+async function secureFetchSitemaps(sitemapUrls, options = {}) {
+  const limits = { ...DEFAULTS, ...options };
+  const fetchImpl = options.allowPrivateHosts ? options.fetch ?? globalThis.fetch : createGuardedFetch(options.fetch);
+  const queue = [...new Set(sitemapUrls)];
+  const visited = /* @__PURE__ */ new Set();
+  const urls = /* @__PURE__ */ new Set();
+  const sitemaps = [];
+  let truncated = false;
+  while (queue.length > 0) {
+    if (sitemaps.length >= limits.maxSitemaps || urls.size >= limits.maxUrls) {
+      truncated = true;
+      break;
+    }
+    const url = queue.shift();
+    if (visited.has(url)) {
+      continue;
+    }
+    visited.add(url);
+    const entry = { url, status: null, kind: null, urlCount: 0 };
+    sitemaps.push(entry);
+    try {
+      const signal = AbortSignal.timeout(limits.timeoutMs);
+      const response = await fetchImpl(url, {
+        headers: { "Accept": "application/xml,text/xml,*/*", "User-Agent": SERVER_USER_AGENT },
+        signal
+      });
+      entry.status = response.status;
+      if (!response.ok) {
+        await response.body?.cancel();
+        entry.error = `HTTP ${response.status}`;
+        continue;
+      }
+      let bytes = await readBodyCapped(response, limits.maxBytes, signal);
+      if (isGzip(bytes)) {
+        bytes = await gunzipAsync(bytes, { maxOutputLength: limits.maxBytes });
+      }
+      const parsed = parseSitemapXml(new TextDecoder().decode(bytes));
+      entry.kind = parsed.kind;
+      if (parsed.kind === "invalid") {
+        entry.error = "Not a sitemap: expected <urlset> or <sitemapindex>";
+      } else if (parsed.kind === "sitemapindex") {
+        entry.urlCount = parsed.locs.length;
+        queue.push(...parsed.locs.filter((loc) => !visited.has(loc)));
+      } else {
+        entry.urlCount = parsed.locs.length;
+        for (const loc of parsed.locs) {
+          if (urls.size >= limits.maxUrls) {
+            truncated = true;
+            break;
+          }
+          urls.add(loc);
+        }
+      }
+    } catch (err) {
+      entry.error = err instanceof BodyTooLargeError ? `Sitemap is larger than ${Math.round(limits.maxBytes / 1024 / 1024)} MiB` : err instanceof Error ? err.name === "TimeoutError" ? "Request timed out" : err.message : "Failed to fetch sitemap";
+    }
+  }
+  if (queue.some((url) => !visited.has(url))) {
+    truncated = true;
+  }
+  return { sitemaps, urls: [...urls], truncated };
+}
+
+// src/args.ts
+import { parseArgs } from "node:util";
+var AI_PRESETS = ["block-ai-training", "block-all-ai", "allow-all-ai"];
+function isAiPreset(value) {
+  return AI_PRESETS.includes(value);
+}
+var UsageError = class extends Error {
+};
+function parseCliArgs(argv) {
+  return parseArgs({
+    args: argv,
+    allowPositionals: true,
+    options: {
+      "help": { type: "boolean", short: "h" },
+      "fail-on": { type: "string" },
+      "expect-allowed": { type: "string", multiple: true },
+      "expect-blocked": { type: "string", multiple: true },
+      "check-sitemaps": { type: "boolean" },
+      "format": { type: "string" },
+      "path-label": { type: "string" },
+      "write": { type: "boolean" },
+      "ai": { type: "string" }
+    }
+  });
+}
+function parseExpectation(value) {
+  const index = value.indexOf(":");
+  if (index <= 0 || index === value.length - 1) {
+    throw new UsageError(`Expected "<user-agent>:<path>", got "${value}"`);
+  }
+  const path = value.slice(index + 1).trim();
+  return { agent: value.slice(0, index).trim(), path: path.startsWith("/") ? path : `/${path}` };
+}
+
+// src/format.ts
 var HELP = `robots-txt-optimizer \u2014 validate, test, and optimize robots.txt
 
 Usage:
@@ -2453,8 +2428,84 @@ optimize options:
 
 Exit codes: 0 success, 1 check failed, 2 usage or input error.
 `;
-var AI_PRESETS = ["block-ai-training", "block-all-ai", "allow-all-ai"];
-var UsageError = class extends Error {
+function escapeAnnotation(text) {
+  return text.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+}
+function printCheckText(io, label, issues, failures, expectationCount, sitemapUrlsChecked) {
+  io.stdout(`robots.txt check: ${label}
+`);
+  for (const issue of issues) {
+    io.stdout(`  ${issue.severity === "error" ? "\u2716" : "\u26A0"} ${issue.line ? `line ${issue.line}: ` : ""}${issue.message}
+`);
+  }
+  const issueMessages = new Set(issues.map((issue) => issue.message));
+  for (const failure of failures.filter((f) => !issueMessages.has(f.message))) {
+    io.stdout(`  \u2716 ${failure.message}
+`);
+  }
+  const extras = [
+    expectationCount ? `${expectationCount} expectation(s)` : "",
+    sitemapUrlsChecked !== void 0 ? `${sitemapUrlsChecked} sitemap URL(s)` : ""
+  ].filter(Boolean).join(", ");
+  io.stdout(failures.length ? `
+\u2716 ${failures.length} problem(s) failed the check
+` : `
+\u2714 Passed${extras ? ` (${extras})` : ""}${issues.length ? ` with ${issues.length} non-blocking issue(s)` : ""}
+`);
+}
+
+// src/io.ts
+import { readFile, writeFile } from "node:fs/promises";
+
+// package.json
+var package_default = {
+  name: "@robots-txt-optimizer/cli",
+  version: "0.0.0",
+  private: true,
+  description: "Validate, test, and optimize robots.txt files from the command line or CI",
+  type: "module",
+  bin: {
+    "robots-txt-optimizer": "./dist/cli.mjs"
+  },
+  files: [
+    "dist"
+  ],
+  scripts: {
+    build: 'esbuild src/cli.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/cli.mjs --banner:js="#!/usr/bin/env node" --log-level=warning',
+    test: "vitest run",
+    typecheck: "tsc --noEmit"
+  },
+  dependencies: {
+    "@robots-txt-optimizer/core": "workspace:*"
+  },
+  devDependencies: {
+    "@types/node": "catalog:",
+    esbuild: "^0.28.2",
+    typescript: "catalog:",
+    vitest: "catalog:"
+  },
+  engines: {
+    node: ">=20"
+  }
+};
+
+// src/io.ts
+var USER_AGENT = `robots-txt-optimizer-cli/${package_default.version}`;
+async function readStdin() {
+  process.stdin.setEncoding("utf8");
+  let text = "";
+  for await (const chunk of process.stdin) {
+    text += String(chunk);
+  }
+  return text;
+}
+var defaultIO = {
+  stdout: (text) => process.stdout.write(text),
+  stderr: (text) => process.stderr.write(text),
+  readFile: (path) => readFile(path, "utf8"),
+  readStdin,
+  writeFile: (path, text) => writeFile(path, text, "utf8"),
+  fetch: globalThis.fetch
 };
 function looksLikeUrl(input) {
   if (/^https?:\/\//i.test(input)) {
@@ -2462,40 +2513,27 @@ function looksLikeUrl(input) {
   }
   return /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?(\/.*)?$/i.test(input) && !/\.txt$/i.test(input);
 }
-async function readStdin() {
-  const chunks = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks).toString("utf8");
+function isNotFound(err) {
+  return err instanceof Error && "code" in err && err.code === "ENOENT";
 }
 async function loadInput(input, io) {
   if (input === "-") {
-    return { text: await readStdin(), label: "stdin" };
+    return { text: await io.readStdin(), label: "stdin" };
   }
   try {
     return { text: await io.readFile(input), label: input, file: input };
   } catch (err) {
-    const missing = err.code === "ENOENT";
+    const missing = isNotFound(err);
     if (!missing || !looksLikeUrl(input)) {
-      throw new UsageError(missing ? `File not found: ${input}` : `Cannot read ${input}: ${err.message}`);
+      throw new UsageError(missing ? `File not found: ${input}` : `Cannot read ${input}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
   const url = normalizeRobotsUrl(input);
-  const result = await fetchRobotsTxt(url, { fetch: io.fetch, userAgent: "robots-txt-optimizer-cli/1.0", source: "server" });
+  const result = await fetchRobotsTxt(url, { fetch: io.fetch, userAgent: USER_AGENT, source: "server" });
   return { text: result.status >= 200 && result.status < 300 ? result.text : "", label: result.finalUrl, fetchStatus: result.status };
 }
-function parseExpectation(value) {
-  const index = value.indexOf(":");
-  if (index <= 0 || index === value.length - 1) {
-    throw new UsageError(`Expected "<user-agent>:<path>", got "${value}"`);
-  }
-  const path = value.slice(index + 1).trim();
-  return { agent: value.slice(0, index).trim(), path: path.startsWith("/") ? path : `/${path}` };
-}
-function escapeAnnotation(text) {
-  return text.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
-}
+
+// src/run.ts
 async function runCheck(input, values, io) {
   const failOn = values["fail-on"] ?? "error";
   if (!["error", "warning", "none"].includes(failOn)) {
@@ -2524,7 +2562,7 @@ async function runCheck(input, values, io) {
     ...(values["expect-blocked"] ?? []).map((v) => ({ ...parseExpectation(v), allowed: false }))
   ];
   const expectationResults = expectations.map((expectation) => {
-    const result = checkRobotsPath(doc.raw, expectation.agent, expectation.path, doc);
+    const result = checkRobotsPath(doc, expectation.agent, expectation.path);
     return { ...expectation, actual: result.allowed, line: result.matchingLine, rule: result.matchedPattern };
   });
   for (const result of expectationResults) {
@@ -2582,31 +2620,9 @@ async function runCheck(input, values, io) {
   printCheckText(io, input.label, issues, failures, expectationResults.length, sitemapSummary?.checked);
   return ok ? 0 : 1;
 }
-function printCheckText(io, label, issues, failures, expectationCount, sitemapUrlsChecked) {
-  io.stdout(`robots.txt check: ${label}
-`);
-  for (const issue of issues) {
-    io.stdout(`  ${issue.severity === "error" ? "\u2716" : "\u26A0"} ${issue.line ? `line ${issue.line}: ` : ""}${issue.message}
-`);
-  }
-  const issueMessages = new Set(issues.map((issue) => issue.message));
-  for (const failure of failures.filter((f) => !issueMessages.has(f.message))) {
-    io.stdout(`  \u2716 ${failure.message}
-`);
-  }
-  const extras = [
-    expectationCount ? `${expectationCount} expectation(s)` : "",
-    sitemapUrlsChecked !== void 0 ? `${sitemapUrlsChecked} sitemap URL(s)` : ""
-  ].filter(Boolean).join(", ");
-  io.stdout(failures.length ? `
-\u2716 ${failures.length} problem(s) failed the check
-` : `
-\u2714 Passed${extras ? ` (${extras})` : ""}${issues.length ? ` with ${issues.length} non-blocking issue(s)` : ""}
-`);
-}
 async function runOptimize(input, values, io) {
   const preset = values.ai;
-  if (preset && !AI_PRESETS.includes(preset)) {
+  if (preset !== void 0 && !isAiPreset(preset)) {
     throw new UsageError(`--ai must be one of ${AI_PRESETS.join(", ")}`);
   }
   let text = analyzeRobotsTxt(input.text).optimizedText;
@@ -2695,21 +2711,7 @@ ${CRAWLER_CATEGORY_LABELS[entry.crawler.category]}
 }
 async function run(argv, io = defaultIO) {
   try {
-    const { values, positionals } = parseArgs({
-      args: argv,
-      allowPositionals: true,
-      options: {
-        "help": { type: "boolean", short: "h" },
-        "fail-on": { type: "string" },
-        "expect-allowed": { type: "string", multiple: true },
-        "expect-blocked": { type: "string", multiple: true },
-        "check-sitemaps": { type: "boolean" },
-        "format": { type: "string" },
-        "path-label": { type: "string" },
-        "write": { type: "boolean" },
-        "ai": { type: "string" }
-      }
-    });
+    const { values, positionals } = parseCliArgs(argv);
     const [command, ...args] = positionals;
     if (values.help || !command) {
       io.stdout(HELP);
@@ -2745,6 +2747,8 @@ async function run(argv, io = defaultIO) {
 }
 
 // src/cli.ts
-run(process.argv.slice(2)).then((code) => {
-  process.exitCode = code;
+process.exitCode = await run(process.argv.slice(2)).catch((err) => {
+  process.stderr.write(`Error: ${err instanceof Error ? err.message : String(err)}
+`);
+  return 2;
 });

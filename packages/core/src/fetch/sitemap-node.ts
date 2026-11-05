@@ -1,6 +1,9 @@
-import { gunzipSync } from 'node:zlib'
+/// <reference types="node" />
+import { promisify } from 'node:util'
+import { gunzip } from 'node:zlib'
 import { parseSitemapXml, type SitemapFetchEntry, type SitemapReport } from '../sitemap'
-import { createGuardedFetch, SERVER_USER_AGENT } from './node'
+import { createGuardedFetch, SERVER_USER_AGENT } from './guarded-fetch'
+import { BodyTooLargeError, readBodyCapped } from './read-capped'
 
 export interface FetchSitemapsOptions {
   /** Maximum sitemap files to download, including indexes. */
@@ -22,36 +25,10 @@ const DEFAULTS = {
   timeoutMs: 10_000
 }
 
+const gunzipAsync = promisify(gunzip)
+
 function isGzip(bytes: Uint8Array): boolean {
   return bytes[0] === 0x1F && bytes[1] === 0x8B
-}
-
-async function readCapped(response: Response, maxBytes: number): Promise<Uint8Array> {
-  const reader = response.body?.getReader()
-  if (!reader) {
-    return new Uint8Array()
-  }
-  const chunks: Uint8Array[] = []
-  let total = 0
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) {
-      break
-    }
-    total += value.byteLength
-    if (total > maxBytes) {
-      await reader.cancel()
-      throw new Error(`Sitemap is larger than ${Math.round(maxBytes / 1024 / 1024)} MiB`)
-    }
-    chunks.push(value)
-  }
-  const bytes = new Uint8Array(total)
-  let offset = 0
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset)
-    offset += chunk.byteLength
-  }
-  return bytes
 }
 
 /**
@@ -87,9 +64,10 @@ export async function secureFetchSitemaps(
     sitemaps.push(entry)
 
     try {
+      const signal = AbortSignal.timeout(limits.timeoutMs)
       const response = await fetchImpl(url, {
         headers: { 'Accept': 'application/xml,text/xml,*/*', 'User-Agent': SERVER_USER_AGENT },
-        signal: AbortSignal.timeout(limits.timeoutMs)
+        signal
       })
       entry.status = response.status
       if (!response.ok) {
@@ -98,9 +76,9 @@ export async function secureFetchSitemaps(
         continue
       }
 
-      let bytes = await readCapped(response, limits.maxBytes)
+      let bytes = await readBodyCapped(response, limits.maxBytes, signal)
       if (isGzip(bytes)) {
-        bytes = gunzipSync(bytes, { maxOutputLength: limits.maxBytes })
+        bytes = await gunzipAsync(bytes, { maxOutputLength: limits.maxBytes })
       }
       const parsed = parseSitemapXml(new TextDecoder().decode(bytes))
       entry.kind = parsed.kind
@@ -121,9 +99,11 @@ export async function secureFetchSitemaps(
         }
       }
     } catch (err) {
-      entry.error = err instanceof Error
-        ? (err.name === 'TimeoutError' ? 'Request timed out' : err.message)
-        : 'Failed to fetch sitemap'
+      entry.error = err instanceof BodyTooLargeError
+        ? `Sitemap is larger than ${Math.round(limits.maxBytes / 1024 / 1024)} MiB`
+        : err instanceof Error
+          ? (err.name === 'TimeoutError' ? 'Request timed out' : err.message)
+          : 'Failed to fetch sitemap'
     }
   }
 

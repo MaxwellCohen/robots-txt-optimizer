@@ -16,7 +16,7 @@ Allow: /
 ${SITEMAP}
 `
 
-const BASE_TEMPLATES: RobotsTemplate[] = [
+const BASE_TEMPLATES: readonly RobotsTemplate[] = [
   {
     id: 'allow-all',
     name: 'Allow everything',

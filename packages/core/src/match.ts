@@ -1,6 +1,6 @@
 import { decodePath } from 'robots-linter'
 import type { Directive, RobotsDocument, UserAgentGroup } from './types'
-import { parseRobotsTxt } from './parse'
+import { AI_TRAINING_POLICY_TOKEN } from './crawlers-data'
 import { normalizeUserAgentForMatch, userAgentMatches } from './robots-text'
 
 export interface PathMatchResult {
@@ -78,8 +78,8 @@ export function matchCompiledPathRules(
     if (typeof exclude === 'number' ? index === exclude : exclude.has(index)) {
       continue
     }
-    const rule = rules[index]!
-    if (rule.regex.test(decoded)) {
+    const rule = rules[index]
+    if (rule?.regex.test(decoded)) {
       matches.push({ rule, index })
     }
   }
@@ -126,16 +126,16 @@ function groupMatchesUserAgent(
   )
 }
 
+/** Policy tokens (e.g. `__usage_ai-training`) are never matched by `User-agent: *`. */
+function isPolicyToken(userAgent: string): boolean {
+  return normalizeUserAgentForMatch(userAgent) === normalizeUserAgentForMatch(AI_TRAINING_POLICY_TOKEN)
+}
+
 /**
  * Groups that apply to `userAgent`: every group naming it, or the `*` groups
  * when none do. Rules from all applicable groups are combined (RFC 9309).
  * Groups with rules but no User-agent line are treated as `*`.
  */
-/** Policy tokens (e.g. `__usage_ai-training`) are never matched by `User-agent: *`. */
-function isPolicyToken(userAgent: string): boolean {
-  return normalizeUserAgentForMatch(userAgent) === normalizeUserAgentForMatch('__usage_ai-training')
-}
-
 export function findApplicableGroups(doc: RobotsDocument, userAgent: string): UserAgentGroup[] {
   const groups = doc.groups.map(group => ({
     group,
@@ -155,10 +155,9 @@ export function findApplicableGroups(doc: RobotsDocument, userAgent: string): Us
 }
 
 export function checkRobotsPath(
-  robotsTxt: string,
+  doc: RobotsDocument,
   userAgent: string,
-  path: string,
-  doc: RobotsDocument = parseRobotsTxt(robotsTxt)
+  path: string
 ): PathMatchResult {
   const directives: Directive[] = findApplicableGroups(doc, userAgent).flatMap(group =>
     group.directives.filter(directive => directive.type === 'allow' || directive.type === 'disallow')

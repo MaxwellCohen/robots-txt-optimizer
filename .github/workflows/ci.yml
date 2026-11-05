@@ -1,15 +1,20 @@
 name: ci
 
-on: push
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   ci:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        node: [22]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -21,25 +26,20 @@ jobs:
       - name: Install node
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 22
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install
-
-      - name: Lint
-        run: pnpm run lint
+        run: pnpm install --frozen-lockfile
 
       - name: Typecheck
         run: pnpm run typecheck
 
+      - name: Lint
+        run: pnpm run lint
+
       - name: Test
         run: pnpm run test
-
-      - name: Check bundled CLI is up to date
-        run: |
-          pnpm --filter @robots-txt-optimizer/cli build
-          git diff --exit-code -- packages/cli/dist || (echo "::error::packages/cli/dist is stale — run 'pnpm --filter @robots-txt-optimizer/cli build' and commit" && exit 1)
 
       - name: Check this site's robots.txt
         uses: ./

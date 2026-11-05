@@ -15,3 +15,6 @@ export const DEFAULT_PATHS = [
 ] as const
 
 export const SIMULATION_ORIGIN = 'https://example.com'
+
+/** Search crawlers checked for render-resource blocks and sitemap conflicts. */
+export const CHECK_AGENTS = ['Googlebot', 'Bingbot'] as const

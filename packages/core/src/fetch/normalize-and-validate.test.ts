@@ -22,6 +22,11 @@ describe('normalizeRobotsUrl', () => {
     expect(url.pathname).toBe('/custom/robots.txt')
   })
 
+  it('does not treat names merely ending in robots.txt as robots.txt', () => {
+    expect(normalizeRobotsUrl('https://example.com/notrobots.txt').pathname).toBe('/robots.txt')
+    expect(normalizeRobotsUrl('https://example.com/a/myrobots.txt?x=1').search).toBe('')
+  })
+
   it('throws for empty input', () => {
     expect(() => normalizeRobotsUrl('')).toThrow(RobotsUrlError)
   })
@@ -56,14 +61,18 @@ describe('validateFetchResult', () => {
     expect(validateFetchResult({ ...base, contentType: 'application/json' })).toBeNull()
   })
 
+  it('returns null when the content type is missing', () => {
+    expect(validateFetchResult({ ...base, contentType: null })).toBeNull()
+  })
+
   it('accepts successful text responses', () => {
     expect(validateFetchResult(base)).toEqual(base)
   })
 })
 
 describe('isTextResponse', () => {
-  it('treats missing content type as text', () => {
-    expect(isTextResponse(null)).toBe(true)
+  it('treats missing content type as not text', () => {
+    expect(isTextResponse(null)).toBe(false)
   })
 
   it('accepts text/plain and text/*', () => {

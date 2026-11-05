@@ -32,41 +32,24 @@ export default defineNuxtConfig({
 
   routeRules: {
     // Prerender at build so CDN has HTML immediately (sub-1s FCP).
-    // ISR regenerates in the background after the revalidation window.
-    '/': {
-      prerender: true,
-      isr: 1209600
-    },
-    '/about': {
-      prerender: true,
-      isr: 1209600
-    },
-    '/compare': {
-      prerender: true,
-      isr: 1209600
-    },
+    '/': { prerender: true },
+    '/about': { prerender: true },
+    '/compare': { prerender: true },
     '/robots.txt': {
       prerender: true
     },
     '/llms.txt': {
       prerender: true
     },
-    '/_nuxt/**': {
-      headers: {
-        'Cache-Control': 'public, max-age=31536000, immutable'
-      }
-    },
     '/api/**': {
-      isr: false
+      isr: false,
+      headers: { 'Cache-Control': 'no-store' }
     }
   },
 
+  // Kept: removal not verified (no full build allowed while app/ is being edited).
   future: {
     compatibilityVersion: 5
-  },
-
-  features: {
-    inlineStyles: true
   },
 
   experimental: {
@@ -81,8 +64,8 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-09-01',
 
   nitro: {
+    // Kept: removal not verified against a build.
     future: {
-      // Prefer explicit `isr` route rules on Vercel (no legacy swr/static mapping).
       nativeSWR: true
     },
     preset: 'vercel',
