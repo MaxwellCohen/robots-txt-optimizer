@@ -55,8 +55,6 @@ export {
   findKnownCrawler,
   KNOWN_CRAWLERS,
   suggestCrawlerToken,
-  type CrawlerAccess,
-  type CrawlerAccessStatus,
   type CrawlerCategory,
   type CrawlerPolicy,
   type CrawlerPolicyAction,

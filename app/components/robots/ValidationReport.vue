@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { ValidationResult } from '@robots-txt-optimizer/core'
 
-defineProps<{
+const props = defineProps<{
   validation: ValidationResult
 }>()
+
+const errorCount = computed(() => props.validation.issues.filter(issue => issue.severity === 'error').length)
 </script>
 
 <template>
@@ -22,7 +24,7 @@ defineProps<{
       variant="subtle"
       icon="i-lucide-x-circle"
       title="Validation failed"
-      :description="`${validation.issues.filter(i => i.severity === 'error').length} error(s) found`"
+      :description="`${errorCount} error(s) found`"
     />
 
     <div
@@ -34,8 +36,8 @@ defineProps<{
       </h3>
       <ul class="space-y-2">
         <li
-          v-for="(issue, index) in validation.issues"
-          :key="index"
+          v-for="issue in validation.issues"
+          :key="`${issue.severity}:${issue.line ?? ''}:${issue.message}`"
           class="flex items-start gap-2 text-sm rounded-lg border border-default p-3"
         >
           <UBadge
@@ -48,7 +50,7 @@ defineProps<{
           <div>
             <p>{{ issue.message }}</p>
             <p
-              v-if="issue.line"
+              v-if="issue.line !== undefined"
               class="text-muted text-xs mt-1"
             >
               Line {{ issue.line }}

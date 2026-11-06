@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { parseRobotsTxt } from './parse'
 import { checkRobotsPath } from './match'
 
 function allowed(robots: string, path: string, agent = 'Googlebot'): boolean {
-  return checkRobotsPath(robots, agent, path).allowed
+  return checkRobotsPath(parseRobotsTxt(robots), agent, path).allowed
 }
 
 describe('checkRobotsPath (RFC 9309 matching)', () => {
@@ -61,7 +62,7 @@ describe('checkRobotsPath group handling', () => {
   })
 
   it('reports the line of the winning rule', () => {
-    const result = checkRobotsPath('User-agent: *\nDisallow: /\nAllow: /blog', 'Googlebot', '/blog/x')
+    const result = checkRobotsPath(parseRobotsTxt('User-agent: *\nDisallow: /\nAllow: /blog'), 'Googlebot', '/blog/x')
     expect(result).toMatchObject({ allowed: true, matchedPattern: '/blog', matchingLine: 3 })
   })
 })

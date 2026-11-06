@@ -39,11 +39,15 @@ export function parseSimulationPaths(text: string): string[] {
   return paths
 }
 
+function normalizeSimulationConfig(userAgents: readonly string[], paths: readonly string[]): SimulationConfig {
+  return {
+    userAgents: userAgents.map(agent => agent.trim()).filter(Boolean),
+    paths: paths.map(normalizeSimulationPath).filter(Boolean)
+  }
+}
+
 export function encodeSimulationConfig(config: SimulationConfig): string {
-  return JSON.stringify({
-    userAgents: config.userAgents,
-    paths: config.paths.map(normalizeSimulationPath).filter(Boolean)
-  })
+  return JSON.stringify(normalizeSimulationConfig(config.userAgents, config.paths))
 }
 
 export function decodeSimulationConfig(json: string): SimulationConfig | null {
@@ -64,16 +68,12 @@ export function decodeSimulationConfig(json: string): SimulationConfig | null {
       return null
     }
 
-    const normalizedAgents = userAgents.map(agent => agent.trim()).filter(Boolean)
-    const normalizedPaths = paths.map(path => normalizeSimulationPath(path)).filter(Boolean)
-    if (normalizedAgents.length === 0 || normalizedPaths.length === 0) {
+    const normalized = normalizeSimulationConfig(userAgents, paths)
+    if (normalized.userAgents.length === 0 || normalized.paths.length === 0) {
       return null
     }
 
-    return {
-      userAgents: normalizedAgents,
-      paths: normalizedPaths
-    }
+    return normalized
   } catch {
     return null
   }
@@ -107,11 +107,7 @@ export function collectUserAgentOptions(
   })
 }
 
-function arraysEqual(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((value, index) => value === b[index])
-}
-
 export function isDefaultSimulationConfig(config: SimulationConfig): boolean {
-  return arraysEqual(config.userAgents, DEFAULT_USER_AGENTS)
-    && arraysEqual(config.paths, DEFAULT_PATHS)
+  return JSON.stringify(config.userAgents) === JSON.stringify(DEFAULT_USER_AGENTS)
+    && JSON.stringify(config.paths) === JSON.stringify(DEFAULT_PATHS)
 }

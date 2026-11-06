@@ -1,43 +1,23 @@
 <script setup lang="ts">
 import type { ValidationIssue } from '@robots-txt-optimizer/core'
 
-const model = defineModel<string>({ default: '' })
-
 const props = withDefaults(defineProps<{
   rows?: number
   placeholder?: string
+  ariaLabel?: string
   validationIssues?: ValidationIssue[]
 }>(), {
   rows: 12,
+  ariaLabel: 'robots.txt content',
   validationIssues: () => []
 })
 
-const lineNumbersRef = ref<HTMLElement | null>(null)
-const highlightRef = ref<HTMLElement | null>(null)
+const model = defineModel<string>({ default: '' })
 
-const lineCount = computed(() => {
-  const text = model.value
-  if (text.length === 0) {
-    return 1
-  }
+const gutterEl = useTemplateRef<HTMLElement>('gutter')
+const highlightEl = useTemplateRef<HTMLElement>('highlight')
 
-  let count = 1
-  for (let index = 0; index < text.length; index++) {
-    if (text.charCodeAt(index) === 10) {
-      count++
-    }
-  }
-  return count
-})
-
-const lineNumbers = computed(() => {
-  const count = lineCount.value
-  const numbers = new Array<string>(count)
-  for (let index = 0; index < count; index++) {
-    numbers[index] = String(index + 1)
-  }
-  return numbers.join('\n')
-})
+const { lineCount, lineNumbers, syncScroll } = useLineGutter(model)
 
 const lineSpacer = computed(() => {
   const count = lineCount.value
@@ -56,16 +36,6 @@ const errorLineNumbers = computed(() => {
   }
   return [...lines].sort((a, b) => a - b)
 })
-
-function syncScroll(event: Event) {
-  const target = event.target as HTMLTextAreaElement
-  if (lineNumbersRef.value) {
-    lineNumbersRef.value.scrollTop = target.scrollTop
-  }
-  if (highlightRef.value) {
-    highlightRef.value.scrollTop = target.scrollTop
-  }
-}
 </script>
 
 <template>
@@ -73,7 +43,7 @@ function syncScroll(event: Event) {
     class="flex w-full overflow-hidden rounded-md border border-default bg-default ring-offset-2 ring-offset-default focus-within:ring-2 focus-within:ring-primary"
   >
     <div
-      ref="lineNumbersRef"
+      ref="gutter"
       aria-hidden="true"
       class="m-0 shrink-0 overflow-hidden border-r border-default bg-elevated"
     >
@@ -92,7 +62,7 @@ function syncScroll(event: Event) {
     <div class="relative min-h-0 min-w-0 flex-1">
       <div
         v-if="errorLineNumbers.length > 0"
-        ref="highlightRef"
+        ref="highlight"
         aria-hidden="true"
         class="pointer-events-none absolute inset-0 z-0 overflow-hidden"
       >
@@ -112,9 +82,10 @@ function syncScroll(event: Event) {
         v-model="model"
         :rows="rows"
         :placeholder="placeholder"
+        :aria-label="ariaLabel"
         spellcheck="false"
         class="relative z-10 min-h-0 w-full h-full resize-y border-0 bg-transparent px-3 py-2 text-sm font-mono leading-5 outline-none"
-        @scroll="syncScroll"
+        @scroll="syncScroll($event, gutterEl, highlightEl)"
       />
     </div>
   </div>

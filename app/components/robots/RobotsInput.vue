@@ -4,40 +4,19 @@ import { getRobotsTemplates } from '@robots-txt-optimizer/core/templates'
 
 const emit = defineEmits<{
   analyzeUrl: [url: string]
-  analyzeText: [text: string]
 }>()
 
 const props = defineProps<{
   loading?: boolean
   fetchError?: FetchError | null
-  initialUrl?: string
-  initialPastedText?: string
   loadedUrl?: string | null
-  loadedText?: string | null
   validationIssues?: ValidationIssue[]
 }>()
 
-const url = ref(props.initialUrl ?? '')
-const pastedText = ref(props.initialPastedText ?? '')
+const url = defineModel<string>('url', { default: '' })
+const pastedText = defineModel<string>('text', { default: '' })
 
-// Sync flush so a parent can clear and re-set the same text to force a reload.
-watch(() => props.initialPastedText, (value) => {
-  if (value !== undefined && value !== pastedText.value) {
-    pastedText.value = value
-  }
-}, { flush: 'sync' })
-
-watch(() => props.loadedText, (value) => {
-  if (value !== null && value !== undefined) {
-    pastedText.value = value
-  }
-})
-
-watch(() => props.initialUrl, (value) => {
-  if (value) {
-    url.value = value
-  }
-})
+const textPlaceholder = 'User-agent: *\nDisallow: /private/'
 
 function submitUrl() {
   if (url.value.trim()) {
@@ -45,22 +24,36 @@ function submitUrl() {
   }
 }
 
+type RobotsTemplate = ReturnType<typeof getRobotsTemplates>[number]
+
+const pendingTemplate = ref<RobotsTemplate | null>(null)
+const confirmOpen = computed({
+  get: () => pendingTemplate.value !== null,
+  set: (open) => {
+    if (!open) {
+      pendingTemplate.value = null
+    }
+  }
+})
+
+function applyTemplate(template: RobotsTemplate) {
+  pastedText.value = template.text
+  pendingTemplate.value = null
+}
+
 const templateItems = computed(() => [
   getRobotsTemplates().map(template => ({
     label: template.name,
     description: template.description,
     onSelect: () => {
-      if (pastedText.value.trim() && !window.confirm(`Replace the current content with the ${template.name} template?`)) {
-        return
+      if (pastedText.value.trim()) {
+        pendingTemplate.value = template
+      } else {
+        applyTemplate(template)
       }
-      pastedText.value = template.text
     }
   }))
 ])
-
-watch(pastedText, (value) => {
-  emit('analyzeText', value)
-})
 </script>
 
 <template>
@@ -143,10 +136,30 @@ watch(pastedText, (value) => {
           v-model="pastedText"
           :rows="12"
           :validation-issues="props.validationIssues ?? []"
-          placeholder="User-agent: *
-Disallow: /private/"
+          :placeholder="textPlaceholder"
         />
       </UFormField>
     </div>
+
+    <UModal
+      v-model:open="confirmOpen"
+      title="Replace current content?"
+      :description="`This replaces the current content with the ${pendingTemplate?.name ?? ''} template.`"
+    >
+      <template #footer="{ close }">
+        <UButton
+          variant="outline"
+          color="neutral"
+          @click="close"
+        >
+          Cancel
+        </UButton>
+        <UButton
+          @click="pendingTemplate && applyTemplate(pendingTemplate)"
+        >
+          Replace
+        </UButton>
+      </template>
+    </UModal>
   </div>
 </template>

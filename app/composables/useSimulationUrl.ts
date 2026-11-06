@@ -5,18 +5,11 @@ import {
   isDefaultSimulationConfig,
   type SimulationConfig
 } from '@robots-txt-optimizer/core/simulation-config'
-import { compressTextForUrl, decompressTextFromUrl } from '~/utils/url-text'
 
 export const SIMULATION_QUERY_KEY = 's'
 
 export function useSimulationUrl() {
-  const route = useRoute()
-  const router = useRouter()
-
-  const simulationFromQuery = computed(() => {
-    const value = route.query[SIMULATION_QUERY_KEY]
-    return typeof value === 'string' ? value : ''
-  })
+  const { value: simulationFromQuery, clear, write } = useQueryParam(SIMULATION_QUERY_KEY)
 
   async function decodeSimulationFromQuery(encoded: string): Promise<SimulationConfig | null> {
     if (!encoded) {
@@ -34,8 +27,7 @@ export function useSimulationUrl() {
   const debouncedSyncSimulationToUrl = useDebounceFn(async (config: SimulationConfig) => {
     if (isDefaultSimulationConfig(config)) {
       if (simulationFromQuery.value) {
-        const { [SIMULATION_QUERY_KEY]: _, ...rest } = route.query
-        await router.replace({ query: rest })
+        await clear()
       }
       return
     }
@@ -45,12 +37,7 @@ export function useSimulationUrl() {
       return
     }
 
-    await router.replace({
-      query: {
-        ...route.query,
-        [SIMULATION_QUERY_KEY]: encoded
-      }
-    })
+    await write(encoded)
   }, 500)
 
   return {

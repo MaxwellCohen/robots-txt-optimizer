@@ -1,4 +1,4 @@
-import type { CrawlerAccess } from './crawlers'
+import type { KnownCrawler } from './crawlers-data'
 
 export type IssueSeverity = 'error' | 'warning'
 
@@ -74,6 +74,19 @@ export interface OptimizationSuggestion {
   lines: number[]
   groupIndex?: number
   userAgents?: string[]
+}
+
+export type CrawlerAccessStatus = 'allowed' | 'partial' | 'blocked'
+
+export interface CrawlerAccess {
+  crawler: KnownCrawler
+  status: CrawlerAccessStatus
+  /** User-agent values of the group(s) that apply to this crawler. */
+  matchedAgents: string[]
+  /** True when a group names this crawler (or a prefix of it) rather than falling back to `*`. */
+  hasSpecificGroup: boolean
+  /** Line of the rule that decides access to `/`, or 0 for the default. */
+  line: number
 }
 
 export interface RobotsAnalysis {

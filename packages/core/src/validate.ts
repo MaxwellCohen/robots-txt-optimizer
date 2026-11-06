@@ -1,6 +1,6 @@
 import { parse as lintParse } from 'robots-linter'
-import { isUserAgentLineContent, stripComment } from './parse'
-import { textForLint, normalizeDirectiveName } from './robots-text'
+import { isUserAgentLineContent, normalizeDirectiveName, stripComment } from './parse'
+import { textForLint } from './robots-text'
 import type { RobotsDocument, ValidationIssue, ValidationResult } from './types'
 import { collectCrawlabilityIssues } from './checks'
 
@@ -46,26 +46,11 @@ function issueFromParseError(err: unknown, doc: RobotsDocument): ValidationIssue
   }
 }
 
-function directiveNameAtLine(doc: RobotsDocument, lineNum: number): string | undefined {
-  const raw = doc.lines[lineNum - 1]
-  if (raw === undefined) {
-    return undefined
-  }
-  const content = stripComment(raw)
-  const colonIndex = content.indexOf(':')
-  if (colonIndex === -1) {
-    return undefined
-  }
-  const name = content.slice(0, colonIndex).trim()
-  return name || undefined
-}
-
 function collectDirectiveWarnings(doc: RobotsDocument): ValidationIssue[] {
   const issues: ValidationIssue[] = []
 
-  for (let i = 0; i < doc.lines.length; i++) {
+  for (const [i, raw] of doc.lines.entries()) {
     const lineNum = i + 1
-    const raw = doc.lines[i]!
     const content = stripComment(raw)
 
     if (!content) {
@@ -101,19 +86,14 @@ function collectDirectiveWarnings(doc: RobotsDocument): ValidationIssue[] {
       })
     }
 
-    if (normalized === 'useragent' || normalized === 'sitemap') {
-      continue
-    }
-
-    if (normalized === 'allow' || normalized === 'disallow') {
+    if (normalized === 'useragent' || normalized === 'sitemap' || normalized === 'allow' || normalized === 'disallow') {
       continue
     }
 
     if (NON_RFC_DIRECTIVES.has(normalized)) {
-      const directiveName = directiveNameAtLine(doc, lineNum) ?? name
       issues.push({
         severity: 'warning',
-        message: `Directive "${directiveName}" is recognized but not part of RFC 9309 (may be ignored by crawlers)`,
+        message: `Directive "${name}" is recognized but not part of RFC 9309 (may be ignored by crawlers)`,
         line: lineNum
       })
       continue
@@ -132,9 +112,7 @@ function collectDirectiveWarnings(doc: RobotsDocument): ValidationIssue[] {
 function collectSemanticIssues(doc: RobotsDocument): ValidationIssue[] {
   const issues: ValidationIssue[] = []
 
-  for (let gi = 0; gi < doc.groups.length; gi++) {
-    const group = doc.groups[gi]!
-
+  for (const group of doc.groups) {
     if (group.userAgents.length === 0 && group.directives.length > 0) {
       issues.push({
         severity: 'warning',

@@ -21,7 +21,7 @@ export function normalizeRobotsUrl(input: string): URL {
     throw new RobotsUrlError('Only http and https URLs are allowed', 'UNSUPPORTED_PROTOCOL')
   }
 
-  if (parsed.pathname === '/' || !parsed.pathname.endsWith('robots.txt')) {
+  if (parsed.pathname.split('/').pop() !== 'robots.txt') {
     parsed.pathname = '/robots.txt'
     parsed.search = ''
     parsed.hash = ''

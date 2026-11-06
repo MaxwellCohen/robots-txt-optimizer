@@ -30,7 +30,7 @@ Actionable change: remove duplicate directive, remove dead rule, merge duplicate
 
 ## Robots engine
 
-The `@robots-txt-optimizer/core` package — parse, validate, analyze, optimize, and fetch logic. All analysis modules operate on a `RobotsDocument`, not raw text. Consumable from the Nuxt app, a future CLI, or other tools without UI coupling.
+The `@robots-txt-optimizer/core` package — parse, validate, analyze, optimize, and fetch logic. Consumable from the Nuxt app, the CLI, or other tools without UI coupling.
 
 ## Fetch seam
 

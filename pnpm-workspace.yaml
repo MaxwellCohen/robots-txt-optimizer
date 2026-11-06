@@ -31,9 +31,14 @@ overrides:
   "@tiptap/extension-placeholder": "3.31.4"
   "@tiptap/y-tiptap": "3.0.9"
 
+catalog:
+  '@types/node': ^26.6.4
+  typescript: ^6.0.3
+  vitest: ^5.0.3
+
 allowBuilds:
   '@parcel/watcher': false
   '@tailwindcss/oxide': false
-  esbuild: false
+  esbuild: true
   unrs-resolver: false
   vue-demi: false

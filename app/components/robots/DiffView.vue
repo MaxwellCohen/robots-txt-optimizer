@@ -52,7 +52,10 @@ const rows = computed<Row[]>(() => {
 
 <template>
   <div class="space-y-2">
-    <p class="text-xs text-muted">
+    <p
+      v-if="stats.added || stats.removed"
+      class="text-xs text-muted"
+    >
       <span class="text-primary">+{{ stats.added }}</span>
       <span class="ml-2 text-error">−{{ stats.removed }}</span>
     </p>

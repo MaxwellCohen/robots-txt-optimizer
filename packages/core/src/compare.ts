@@ -78,8 +78,8 @@ export function compareRobotsTxt(
   const verdictChanges: VerdictChange[] = []
   for (const userAgent of userAgents) {
     for (const path of paths) {
-      const a = checkRobotsPath(beforeText, userAgent, path, before)
-      const b = checkRobotsPath(afterText, userAgent, path, after)
+      const a = checkRobotsPath(before, userAgent, path)
+      const b = checkRobotsPath(after, userAgent, path)
       if (a.allowed !== b.allowed) {
         verdictChanges.push({
           userAgent,
@@ -98,8 +98,8 @@ export function compareRobotsTxt(
   const beforeAccess = analyzeCrawlerAccess(before)
   const afterAccess = analyzeCrawlerAccess(after)
   const crawlerChanges = beforeAccess.flatMap((entry, index) => {
-    const next = afterAccess[index]!
-    return entry.status === next.status
+    const next = afterAccess[index]
+    return !next || entry.status === next.status
       ? []
       : [{ crawler: entry.crawler, before: entry.status, after: next.status }]
   })

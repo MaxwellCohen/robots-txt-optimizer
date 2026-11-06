@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useToggle } from '@vueuse/core'
 import { compareRobotsTxt } from '@robots-txt-optimizer/core'
 import type { RobotsSnapshot } from '~/composables/useRobotsSnapshots'
 
@@ -11,7 +12,7 @@ const emit = defineEmits<{
   dismiss: []
 }>()
 
-const expanded = ref(false)
+const [expanded, toggleExpanded] = useToggle(false)
 
 const comparison = computed(() => compareRobotsTxt(props.previous.text, props.current))
 
@@ -28,10 +29,10 @@ const savedAt = computed(() =>
     title="This robots.txt changed since you last checked it"
     :description="`Last seen ${savedAt}. ${comparison.verdictChanges.length} crawl verdict${comparison.verdictChanges.length === 1 ? '' : 's'} changed.`"
     :actions="[
-      { label: expanded ? 'Hide changes' : 'Show changes', color: 'warning', variant: 'outline', onClick: () => { expanded = !expanded } }
+      { label: expanded ? 'Hide changes' : 'Show changes', color: 'warning', variant: 'outline', onClick: () => toggleExpanded() }
     ]"
     close
-    @update:open="emit('dismiss')"
+    @update:open="open => !open && emit('dismiss')"
   />
 
   <UCard v-if="expanded">

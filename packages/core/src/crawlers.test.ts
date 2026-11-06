@@ -66,13 +66,13 @@ Sitemap: https://example.com/sitemap.xml`
     expect(text).toContain('User-agent: Googlebot\nDisallow: /private')
     expect(text.trimEnd().endsWith('Sitemap: https://example.com/sitemap.xml')).toBe(true)
 
-    expect(checkRobotsPath(text, 'GPTBot', '/').allowed).toBe(false)
-    expect(checkRobotsPath(text, 'CCBot', '/').allowed).toBe(false)
-    expect(checkRobotsPath(text, 'OAI-SearchBot', '/').allowed).toBe(true)
+    expect(checkRobotsPath(parseRobotsTxt(text), 'GPTBot', '/').allowed).toBe(false)
+    expect(checkRobotsPath(parseRobotsTxt(text), 'CCBot', '/').allowed).toBe(false)
+    expect(checkRobotsPath(parseRobotsTxt(text), 'OAI-SearchBot', '/').allowed).toBe(true)
     // Allowed AI bots keep the catch-all's restrictions.
-    expect(checkRobotsPath(text, 'OAI-SearchBot', '/admin').allowed).toBe(false)
-    expect(checkRobotsPath(text, 'Googlebot', '/private').allowed).toBe(false)
-    expect(checkRobotsPath(text, 'Googlebot', '/admin').allowed).toBe(true)
+    expect(checkRobotsPath(parseRobotsTxt(text), 'OAI-SearchBot', '/admin').allowed).toBe(false)
+    expect(checkRobotsPath(parseRobotsTxt(text), 'Googlebot', '/private').allowed).toBe(false)
+    expect(checkRobotsPath(parseRobotsTxt(text), 'Googlebot', '/admin').allowed).toBe(true)
   })
 
   it('is idempotent', () => {
@@ -85,9 +85,9 @@ Sitemap: https://example.com/sitemap.xml`
   it('lifts a site-wide catch-all block for allowed crawlers but keeps other rules', () => {
     const doc = parseRobotsTxt('User-agent: *\nDisallow: /\nDisallow: /tmp')
     const text = applyCrawlerPolicy(doc, { 'OAI-SearchBot': 'allow', 'Bingbot': 'allow' })
-    expect(checkRobotsPath(text, 'OAI-SearchBot', '/page').allowed).toBe(true)
-    expect(checkRobotsPath(text, 'OAI-SearchBot', '/tmp').allowed).toBe(false)
-    expect(checkRobotsPath(text, 'Googlebot', '/page').allowed).toBe(false)
+    expect(checkRobotsPath(parseRobotsTxt(text), 'OAI-SearchBot', '/page').allowed).toBe(true)
+    expect(checkRobotsPath(parseRobotsTxt(text), 'OAI-SearchBot', '/tmp').allowed).toBe(false)
+    expect(checkRobotsPath(parseRobotsTxt(text), 'Googlebot', '/page').allowed).toBe(false)
   })
 })
 
@@ -116,13 +116,13 @@ describe('AI training policy token', () => {
   it('is not matched by the wildcard group', () => {
     const text = 'User-agent: *\nDisallow: /'
     expect(statusOf(text, token).status).toBe('allowed')
-    expect(checkRobotsPath(text, token, '/').allowed).toBe(true)
+    expect(checkRobotsPath(parseRobotsTxt(text), token, '/').allowed).toBe(true)
   })
 
   it('honors an explicit group', () => {
     const text = `User-agent: ${token}\nDisallow: /\nAllow: /press-kit/`
     expect(statusOf(text, token).status).toBe('blocked')
-    expect(checkRobotsPath(text, token, '/press-kit/a').allowed).toBe(true)
+    expect(checkRobotsPath(parseRobotsTxt(text), token, '/press-kit/a').allowed).toBe(true)
   })
 
   it('is included in the block-ai-training preset', () => {

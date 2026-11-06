@@ -1,17 +1,15 @@
-import { secureFetchRobotsTxt } from '@robots-txt-optimizer/core/node'
-import { createError, defineEventHandler, getQuery } from 'nuxt/server'
+import { enforceRateLimit } from '../../utils/rate-limit'
+import { defineEventHandler, getQuery } from 'nuxt/server'
 import { toHttpError } from '../../utils/robots-errors'
+import { validateUrlQuery } from '../../utils/validate-query'
+import { secureFetchRobotsTxt } from '@robots-txt-optimizer/core/node'
 
 export default defineEventHandler(async (event) => {
-  const query = getQuery(event)
-  const urlParam = query.url
-
-  if (typeof urlParam !== 'string' || !urlParam.trim()) {
-    throw createError({ statusCode: 400, message: 'Missing url query parameter' })
-  }
+  enforceRateLimit(event)
+  const { url } = validateUrlQuery(getQuery(event))
 
   try {
-    return await secureFetchRobotsTxt(urlParam)
+    return await secureFetchRobotsTxt(url)
   } catch (err) {
     toHttpError(err)
   }
