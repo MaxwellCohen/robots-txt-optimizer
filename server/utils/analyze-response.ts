@@ -1,9 +1,11 @@
+import { createError } from 'nuxt/server'
 import { analyzeRobotsTxt, simulatePaths } from '@robots-txt-optimizer/core'
 import { normalizeSimulationPath } from '@robots-txt-optimizer/core/simulation-config'
-import { createError } from 'nuxt/server'
 
-export const MAX_ANALYZE_TEXT_BYTES = 2 * 1024 * 1024
 const MAX_SIMULATION_CELLS = 2000
+
+/** Thrown when the requested simulation grid is too large; routes map it to HTTP 400. */
+export class SimulationLimitError extends Error {}
 
 export interface AnalyzeRequestOptions {
   userAgents?: string[]
@@ -20,7 +22,7 @@ export function buildAnalyzeResponse(text: string, options: AnalyzeRequestOption
     const agents = userAgents ?? [...new Set(analysis.pathSimulation.map(v => v.userAgent))]
     const checked = paths ?? [...new Set(analysis.pathSimulation.map(v => v.path))]
     if (agents.length * checked.length > MAX_SIMULATION_CELLS) {
-      throw createError({ statusCode: 400, message: `Too many user-agent × path combinations (max ${MAX_SIMULATION_CELLS})` })
+      throw new SimulationLimitError(`Too many user-agent × path combinations (max ${MAX_SIMULATION_CELLS})`)
     }
     analysis.pathSimulation = simulatePaths(document, agents, checked)
   }
@@ -37,5 +39,17 @@ export function buildAnalyzeResponse(text: string, options: AnalyzeRequestOption
       line: entry.line
     })),
     sitemaps: document.sitemaps
+  }
+}
+
+/** buildAnalyzeResponse for route handlers: converts limit errors to HTTP 400. */
+export function buildAnalyzeResponseOrHttpError(text: string, options: AnalyzeRequestOptions = {}) {
+  try {
+    return buildAnalyzeResponse(text, options)
+  } catch (err) {
+    if (err instanceof SimulationLimitError) {
+      throw createError({ statusCode: 400, message: err.message })
+    }
+    throw err
   }
 }

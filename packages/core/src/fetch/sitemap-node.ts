@@ -1,7 +1,9 @@
-import { gunzipSync } from 'node:zlib'
+/// <reference types="node" />
+import { promisify } from 'node:util'
+import { gunzip } from 'node:zlib'
 import { parseSitemapXml, type SitemapFetchEntry, type SitemapReport } from '../sitemap'
-import { createGuardedFetch, SERVER_USER_AGENT } from './node'
-import { readCapped } from './read-capped'
+import { createGuardedFetch, SERVER_USER_AGENT } from './guarded-fetch'
+import { BodyTooLargeError, readBodyCapped } from './read-capped'
 
 export interface FetchSitemapsOptions {
   /** Maximum sitemap files to download, including indexes. */
@@ -22,6 +24,8 @@ const DEFAULTS = {
   maxBytes: 10 * 1024 * 1024,
   timeoutMs: 10_000
 }
+
+const gunzipAsync = promisify(gunzip)
 
 function isGzip(bytes: Uint8Array): boolean {
   return bytes[0] === 0x1F && bytes[1] === 0x8B
@@ -60,9 +64,10 @@ export async function secureFetchSitemaps(
     sitemaps.push(entry)
 
     try {
+      const signal = AbortSignal.timeout(limits.timeoutMs)
       const response = await fetchImpl(url, {
         headers: { 'Accept': 'application/xml,text/xml,*/*', 'User-Agent': SERVER_USER_AGENT },
-        signal: AbortSignal.timeout(limits.timeoutMs)
+        signal
       })
       entry.status = response.status
       if (!response.ok) {
@@ -71,10 +76,9 @@ export async function secureFetchSitemaps(
         continue
       }
 
-      let bytes = await readCapped(response, limits.maxBytes,
-        () => new Error(`Sitemap is larger than ${Math.round(limits.maxBytes / 1024 / 1024)} MiB`))
+      let bytes = await readBodyCapped(response, limits.maxBytes, signal)
       if (isGzip(bytes)) {
-        bytes = gunzipSync(bytes, { maxOutputLength: limits.maxBytes })
+        bytes = await gunzipAsync(bytes, { maxOutputLength: limits.maxBytes })
       }
       const parsed = parseSitemapXml(new TextDecoder().decode(bytes))
       entry.kind = parsed.kind
@@ -95,9 +99,11 @@ export async function secureFetchSitemaps(
         }
       }
     } catch (err) {
-      entry.error = err instanceof Error
-        ? (err.name === 'TimeoutError' ? 'Request timed out' : err.message)
-        : 'Failed to fetch sitemap'
+      entry.error = err instanceof BodyTooLargeError
+        ? `Sitemap is larger than ${Math.round(limits.maxBytes / 1024 / 1024)} MiB`
+        : err instanceof Error
+          ? (err.name === 'TimeoutError' ? 'Request timed out' : err.message)
+          : 'Failed to fetch sitemap'
     }
   }
 

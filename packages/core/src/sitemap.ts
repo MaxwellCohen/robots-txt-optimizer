@@ -1,4 +1,5 @@
 import { checkRobotsPath } from './match'
+import { CHECK_AGENTS } from './paths'
 import type { RobotsDocument } from './types'
 
 export type SitemapKind = 'urlset' | 'sitemapindex' | 'invalid'
@@ -18,17 +19,28 @@ const ENTITIES: Record<string, string> = {
 }
 
 function decodeXmlText(value: string): string {
-  const cdata = value.match(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/)
-  const text = cdata ? cdata[1]! : value
-  return text
-    .replace(/&(amp|lt|gt|quot|apos);/g, (_, name: string) => ENTITIES[name]!)
+  return value
+    .replace(/&(amp|lt|gt|quot|apos);/g, (_, name: string) => ENTITIES[name] ?? '')
     .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
     .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
     .trim()
 }
 
+/**
+ * Drops XML comments and turns CDATA sections into escaped text, so markup
+ * inside either can never be mistaken for real elements. CDATA is matched
+ * first so `<!--` inside CDATA stays literal text.
+ */
+function neutralizeXml(xml: string): string {
+  return xml.replace(/<!\[CDATA\[([\s\S]*?)\]\]>|<!--[\s\S]*?-->/g, (_, cdata: string | undefined) =>
+    cdata === undefined
+      ? ''
+      : cdata.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'))
+}
+
 /** Extracts `<loc>` entries from a sitemap or sitemap index (namespace prefixes allowed). */
-export function parseSitemapXml(xml: string): ParsedSitemap {
+export function parseSitemapXml(rawXml: string): ParsedSitemap {
+  const xml = neutralizeXml(rawXml)
   const root = xml.match(/<(?:[\w-]+:)?(urlset|sitemapindex)[\s>]/i)
   if (!root) {
     return { kind: 'invalid', locs: [] }
@@ -37,13 +49,13 @@ export function parseSitemapXml(xml: string): ParsedSitemap {
   const locs: string[] = []
   const locPattern = /<(?:[\w-]+:)?loc>([\s\S]*?)<\/(?:[\w-]+:)?loc>/gi
   for (const match of xml.matchAll(locPattern)) {
-    const loc = decodeXmlText(match[1]!)
+    const loc = decodeXmlText(match[1] ?? '')
     if (loc) {
       locs.push(loc)
     }
   }
 
-  return { kind: root[1]!.toLowerCase() as SitemapKind, locs }
+  return { kind: root[1]?.toLowerCase() as SitemapKind, locs }
 }
 
 export interface SitemapUrlConflict {
@@ -54,7 +66,7 @@ export interface SitemapUrlConflict {
   line: number
 }
 
-export const SITEMAP_CHECK_AGENTS = ['Googlebot', 'Bingbot'] as const
+export const SITEMAP_CHECK_AGENTS = CHECK_AGENTS
 
 function pathOf(url: string): string | null {
   try {
@@ -78,7 +90,7 @@ export function findBlockedSitemapUrls(
       continue
     }
     for (const userAgent of userAgents) {
-      const result = checkRobotsPath(doc.raw, userAgent, path, doc)
+      const result = checkRobotsPath(doc, userAgent, path)
       if (!result.allowed) {
         conflicts.push({
           url,

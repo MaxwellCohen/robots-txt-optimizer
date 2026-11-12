@@ -1,14 +1,8 @@
 <script setup lang="ts">
-import { useRoute, useRouter } from '#app'
 import {
   defaultSimulationConfig,
   type SimulationConfig
 } from '@robots-txt-optimizer/core/simulation-config'
-import { useRobotsAnalysis } from '~/composables/useRobotsAnalysis'
-import { useRobotsFetch } from '~/composables/useRobotsFetch'
-import { useRobotsSnapshots, type RobotsSnapshot } from '~/composables/useRobotsSnapshots'
-import { useRobotsTextUrl } from '~/composables/useRobotsTextUrl'
-import { useSimulationUrl } from '~/composables/useSimulationUrl'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,23 +14,21 @@ const { simulationFromQuery, decodeSimulationFromQuery, debouncedSyncSimulationT
 
 const simulationConfig = ref<SimulationConfig>(defaultSimulationConfig())
 
-const hasResults = computed(() => analysis.value !== null)
-
 const loadedUrl = ref<string | null>(null)
 const fetchedText = ref<string | null>(null)
 const shareUrl = ref<string | null>(null)
-const initialPastedText = ref('')
+const pastedText = ref('')
 const previousSnapshot = ref<RobotsSnapshot | null>(null)
 
 const urlFromQuery = computed(() => {
   const queryUrl = route.query.url
   return typeof queryUrl === 'string' ? queryUrl : ''
 })
+const urlInput = ref(urlFromQuery.value)
 
 async function analyzeUrl(url: string, updateQuery = true) {
   if (updateQuery) {
-    const { r: _, ...rest } = route.query
-    await router.replace({ query: { ...rest, url } })
+    await router.replace({ query: { ...omitQueryKeys(route.query, ROBOTS_TEXT_QUERY_KEY), url } })
   }
 
   const result = await fetchRobotsTxt(url)
@@ -45,6 +37,7 @@ async function analyzeUrl(url: string, updateQuery = true) {
     loadedUrl.value = result.finalUrl
     fetchedText.value = result.text
     shareUrl.value = url
+    pastedText.value = result.text
     runAnalysis(result.text)
   } else {
     loadedUrl.value = null
@@ -54,11 +47,7 @@ async function analyzeUrl(url: string, updateQuery = true) {
   }
 }
 
-async function onAnalyzeUrl(url: string) {
-  await analyzeUrl(url)
-}
-
-function onAnalyzeText(text: string) {
+watch(pastedText, (text) => {
   if (fetchedText.value != null && text !== fetchedText.value) {
     loadedUrl.value = null
     shareUrl.value = null
@@ -70,13 +59,7 @@ function onAnalyzeText(text: string) {
     shareUrl: shareUrl.value,
     fetchedText: fetchedText.value
   })
-}
-
-function onApplyText(text: string) {
-  // RobotsInput only reacts to prop changes, so reset first in case the value repeats.
-  initialPastedText.value = ''
-  initialPastedText.value = text
-}
+})
 
 async function loadTextFromQuery(encoded: string) {
   const text = await decodeTextFromQuery(encoded)
@@ -87,7 +70,7 @@ async function loadTextFromQuery(encoded: string) {
   loadedUrl.value = null
   fetchedText.value = null
   shareUrl.value = null
-  initialPastedText.value = text
+  pastedText.value = text
   runAnalysis(text)
 }
 
@@ -114,6 +97,9 @@ onMounted(async () => {
 })
 
 watch(urlFromQuery, (url, previous) => {
+  if (url) {
+    urlInput.value = url
+  }
   if (url && url !== previous && !textFromQuery.value) {
     analyzeUrl(url, false)
   }
@@ -140,15 +126,13 @@ watch(simulationConfig, (config) => {
 <template>
   <div class="space-y-8">
     <RobotsInput
+      v-model:url="urlInput"
+      v-model:text="pastedText"
       :loading="loading || analyzing"
       :fetch-error="error"
-      :initial-url="urlFromQuery"
-      :initial-pasted-text="initialPastedText"
       :loaded-url="loadedUrl"
-      :loaded-text="fetchedText"
       :validation-issues="analysis?.validation.issues ?? []"
-      @analyze-url="onAnalyzeUrl"
-      @analyze-text="onAnalyzeText"
+      @analyze-url="analyzeUrl"
     />
 
     <RobotsChangeBanner
@@ -164,12 +148,29 @@ watch(simulationConfig, (config) => {
       :requested-url="lastRequestedUrl"
     />
 
-    <RobotsResults
-      v-if="hasResults && analysis"
-      :analysis="analysis"
-      :simulation-config="simulationConfig"
-      @update:simulation-config="simulationConfig = $event"
-      @apply-text="onApplyText"
-    />
+    <template v-if="analysis">
+      <RobotsValidationReport :validation="analysis.validation" />
+
+      <RobotsAiCrawlers
+        :document="analysis.document"
+        :access="analysis.crawlerAccess"
+        @apply-text="pastedText = $event"
+      />
+
+      <RobotsDirectiveSummary :rows="analysis.directiveSummary" />
+
+      <RobotsPathSimulation
+        v-model:config="simulationConfig"
+        :document="analysis.document"
+      />
+
+      <RobotsSitemapCheck :document="analysis.document" />
+
+      <RobotsOptimizationList
+        :document="analysis.document"
+        :suggestions="analysis.suggestions"
+        @apply-text="pastedText = $event"
+      />
+    </template>
   </div>
 </template>

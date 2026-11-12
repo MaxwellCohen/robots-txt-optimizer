@@ -1,12 +1,19 @@
+/** Shared base for fetch-related errors: a stable `code` plus optional `cause`. */
+export abstract class RobotsToolError<Code extends string> extends Error {
+  readonly code: Code
+
+  constructor(message: string, code: Code, options?: ErrorOptions) {
+    super(message, options)
+    this.code = code
+  }
+}
+
 export type RobotsUrlErrorCode = 'MISSING_URL' | 'INVALID_URL' | 'UNSUPPORTED_PROTOCOL'
 
-export class RobotsUrlError extends Error {
-  readonly code: RobotsUrlErrorCode
-
-  constructor(message: string, code: RobotsUrlErrorCode) {
-    super(message)
+export class RobotsUrlError extends RobotsToolError<RobotsUrlErrorCode> {
+  constructor(message: string, code: RobotsUrlErrorCode, options?: ErrorOptions) {
+    super(message, code, options)
     this.name = 'RobotsUrlError'
-    this.code = code
   }
 }
 
@@ -16,24 +23,18 @@ export type RobotsFetchSecurityErrorCode
     | 'PRIVATE_DNS'
     | 'UNSAFE_REDIRECT'
 
-export class RobotsFetchSecurityError extends Error {
-  readonly code: RobotsFetchSecurityErrorCode
-
-  constructor(message: string, code: RobotsFetchSecurityErrorCode) {
-    super(message)
+export class RobotsFetchSecurityError extends RobotsToolError<RobotsFetchSecurityErrorCode> {
+  constructor(message: string, code: RobotsFetchSecurityErrorCode, options?: ErrorOptions) {
+    super(message, code, options)
     this.name = 'RobotsFetchSecurityError'
-    this.code = code
   }
 }
 
 export type RobotsFetchErrorCode = 'TIMEOUT' | 'TOO_LARGE' | 'TOO_MANY_REDIRECTS'
 
-export class RobotsFetchError extends Error {
-  readonly code: RobotsFetchErrorCode
-
-  constructor(message: string, code: RobotsFetchErrorCode) {
-    super(message)
+export class RobotsFetchError extends RobotsToolError<RobotsFetchErrorCode> {
+  constructor(message: string, code: RobotsFetchErrorCode, options?: ErrorOptions) {
+    super(message, code, options)
     this.name = 'RobotsFetchError'
-    this.code = code
   }
 }

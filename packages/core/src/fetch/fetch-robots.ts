@@ -1,6 +1,6 @@
 import { RobotsFetchError } from './errors'
+import { BodyTooLargeError, readBodyCapped } from './read-capped'
 import type { FetchResult } from '../types'
-import { readCapped } from './read-capped'
 
 // Above Google's 500 KiB processing limit so oversized files can still be diagnosed.
 const DEFAULT_MAX_BYTES = 2 * 1024 * 1024
@@ -41,14 +41,12 @@ export async function fetchRobotsTxt(
       redirect: 'follow'
     })
 
-    const tooLarge = () => new RobotsFetchError('robots.txt response is too large', 'TOO_LARGE')
     const contentLength = Number(response.headers.get('content-length') || 0)
     if (contentLength > maxBytes) {
-      await response.body?.cancel()
-      throw tooLarge()
+      throw new RobotsFetchError('robots.txt response is too large', 'TOO_LARGE')
     }
 
-    const bytes = await readCapped(response, maxBytes, tooLarge)
+    const bytes = await readBodyCapped(response, maxBytes, controller.signal)
     const hasBom = bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF
     const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes)
     const finalUrl = response.url || url.toString()
@@ -67,8 +65,11 @@ export async function fetchRobotsTxt(
     if (err instanceof RobotsFetchError) {
       throw err
     }
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new RobotsFetchError('Request timed out', 'TIMEOUT')
+    if (err instanceof BodyTooLargeError) {
+      throw new RobotsFetchError('robots.txt response is too large', 'TOO_LARGE', { cause: err })
+    }
+    if (err instanceof Error && (err.name === 'AbortError' || err.name === 'TimeoutError')) {
+      throw new RobotsFetchError('Request timed out', 'TIMEOUT', { cause: err })
     }
     throw err
   } finally {

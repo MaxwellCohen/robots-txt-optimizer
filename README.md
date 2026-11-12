@@ -6,36 +6,34 @@ Built with [Nuxt](https://nuxt.com) and [Nuxt UI](https://ui.nuxt.com).
 
 ## Features
 
-- **Fetch or paste** — Load `robots.txt` from a domain (with server-side fallback when CORS blocks the browser) or paste content manually
-- **Templates** — Start from WordPress, Shopify, Next.js, Nuxt, e-commerce, staging, or "block AI training" presets
-- **Shareable URLs** — Analyze a site via `/?url=example.com`
-- **Validation** — Built-in RFC 9309 syntax and spec checks, plus crawlability warnings: blocked CSS/JS, site-wide blocks (staging files on production), and misspelled or retired crawler tokens (`anthropic-ai`, `GPT-Bot`, `Bard`, …)
-- **Search & AI crawlers** — Access status for search engines, AI training, AI search, and user-triggered AI fetchers, with one-click policies such as "block AI training, keep AI search"
-- **Directive summary** — Allow, disallow, and other rules grouped by user-agent
-- **Path simulation** — RFC 9309 matching (wildcards, `$` anchors, longest match wins) for any user-agent and path
-- **Sitemap check** — Fetches `Sitemap:` URLs (following sitemap indexes, gzip aware) and lists URLs that robots.txt blocks
-- **Fetch diagnostics** — What the HTTP status, redirects, content type, size (Google's 500 KiB limit), and BOM mean for crawlers
-- **Optimization** — Detect duplicate rules, dead rules, redundant catch-alls, empty groups, and missing user-agents; choose which fixes to apply and review them as a diff
-- **Compare** — `/compare?a=staging.example.com&b=example.com` shows which crawl verdicts and crawler statuses change
-- **Change tracking** — The browser remembers the last robots.txt it saw per site and flags changes on your next visit
+- Fetch (with server-side CORS fallback) or paste `robots.txt`; start from templates; share via `/?url=example.com`
+- Validation and crawlability warnings, search and AI crawler access with one-click AI policies
+- RFC 9309 path simulation, sitemap-blocked URL detection, fetch diagnostics
+- Selectable optimization suggestions with a diff; `/compare` for two files
+- CLI, GitHub Action, and JSON API running the same checks
 
 ## CLI
 
 ```bash
-npx @maxwellcohen/robots-txt-optimizer check public/robots.txt --expect-allowed "Googlebot:/" --expect-blocked "GPTBot:/"
 npx @maxwellcohen/robots-txt-optimizer check example.com --check-sitemaps --fail-on warning
-npx @maxwellcohen/robots-txt-optimizer optimize robots.txt --write --ai block-ai-training
-npx @maxwellcohen/robots-txt-optimizer compare staging.example.com example.com
+
+# from a checkout
+pnpm build:cli
+pnpm cli check public/robots.txt --expect-allowed "Googlebot:/" --expect-blocked "GPTBot:/"
+pnpm cli check example.com --check-sitemaps --fail-on warning
+pnpm cli optimize robots.txt --write --ai block-ai-training
+pnpm cli compare staging.example.com example.com
+pnpm cli crawlers example.com
 ```
 
-From a checkout, run `pnpm build:cli` and use `node packages/cli/dist/cli.mjs` instead.
+Commands: `check`, `optimize`, `compare`, and `crawlers` (search/AI crawler access per bot; `--format json` available). Inputs are a file path, `-` for stdin, or a URL/domain. Run with `--help` for all options. `check` also supports `--format github` (workflow annotations).
 
-Run with `--help` for all options. `check` exits with `1` when the check fails and `2` on usage or input errors. `--format json` and `--format github` (workflow annotations) are available.
+Exit codes: `0` success, `1` check failed, `2` usage or input error.
 
 ## GitHub Action
 
 ```yaml
-- uses: MaxwellCohen/robots-txt-optimizer@main
+- uses: MaxwellCohen/robots-txt-optimizer@v1
   with:
     path: public/robots.txt        # or a site URL
     fail-on: error                 # error | warning | none
@@ -47,7 +45,7 @@ Run with `--help` for all options. `check` exits with `1` when the check fails a
     check-sitemaps: false
 ```
 
-The action runs the bundled CLI in `packages/cli/dist`. After changing `packages/core` or `packages/cli`, run `pnpm build:cli` and commit the bundle (CI fails if it is stale).
+The action installs dependencies and builds the CLI at run time.
 
 ## JSON API
 
@@ -58,7 +56,7 @@ The action runs the bundled CLI in `packages/cli/dist`. After changing `packages
 | `GET /api/sitemap/check?url=https://example.com/sitemap.xml` | Fetch sitemaps (and indexes) and return their URLs |
 | `GET /api/robots/fetch?url=example.com` | Raw fetch proxy used by the app |
 
-Server-side fetches refuse private and local addresses, including via redirects.
+Server-side fetches refuse private and local addresses, including via redirects. API routes are rate limited to 30 requests per minute per IP (in-memory, per instance); `/api/sitemap/check` accepts up to 5 repeated `url` parameters.
 
 ## Quick start
 
@@ -76,10 +74,11 @@ Open [http://localhost:3000](http://localhost:3000).
 | `pnpm dev` | Start the development server |
 | `pnpm build` | Build for production |
 | `pnpm preview` | Preview the production build |
-| `pnpm test` | Run unit tests (Vitest) |
-| `pnpm build:cli` | Bundle the CLI used by the GitHub Action |
+| `pnpm test` | Run unit tests (Vitest) in all packages |
+| `pnpm build:cli` | Bundle the CLI to `packages/cli/dist` |
+| `pnpm cli <args>` | Run the built CLI |
 | `pnpm lint` | Run ESLint |
-| `pnpm typecheck` | Run TypeScript checks |
+| `pnpm typecheck` | Run TypeScript checks (app and packages) |
 
 ## Project structure
 
@@ -87,7 +86,7 @@ Open [http://localhost:3000](http://localhost:3000).
 app/                         # UI (pages, components, composables)
 app/utils/url-text.ts        # Shareable URL compression (?r=, ?s= query params)
 packages/core/               # @robots-txt-optimizer/core — parse, validate, fetch, analyze, optimize, crawlers, sitemaps, compare
-packages/cli/                # robots-txt-optimizer CLI (bundled to dist/ for the GitHub Action)
+packages/cli/                # robots-txt-optimizer CLI (built with `pnpm build:cli`; used by the GitHub Action)
 server/api/                  # Fetch proxy, analyze API, and sitemap check endpoints
 action.yml                   # GitHub Action
 ```

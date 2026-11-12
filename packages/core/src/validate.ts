@@ -1,5 +1,4 @@
-import { stripComment } from './parse'
-import { normalizeDirectiveName } from './robots-text'
+import { normalizeDirectiveName, stripComment } from './parse'
 import type { RobotsDocument, ValidationIssue, ValidationResult } from './types'
 import { collectCrawlabilityIssues } from './checks'
 
@@ -8,14 +7,13 @@ const MAX_LINE_LENGTH = 4096
 
 const PRODUCT_TOKEN = /^[0-9a-zA-Z_-]+$/
 
-// Native RFC 9309 syntax checks (replaces the robots-linter dependency).
+/** Native RFC 9309 syntax checks. */
 function collectSyntaxIssues(doc: RobotsDocument): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   let seenUserAgent = false
 
-  for (let i = 0; i < doc.lines.length; i++) {
+  for (const [i, raw] of doc.lines.entries()) {
     const lineNum = i + 1
-    const raw = doc.lines[i]!
     const content = stripComment(raw)
     if (!content) {
       continue
@@ -43,17 +41,21 @@ function collectSyntaxIssues(doc: RobotsDocument): ValidationIssue[] {
           line: lineNum
         })
       }
-    } else if (normalized === 'allow' || normalized === 'disallow') {
-      const bad = [...value].find(ch => ch.charCodeAt(0) > 0x7e)
-      if (bad) {
-        issues.push({
-          severity: 'warning',
-          message: `Non-ASCII character "${bad}" in path (valid UTF-8 per RFC 9309; percent-encode it for older crawlers)`,
-          line: lineNum
-        })
-      }
+      continue
     }
-    if ((normalized === 'allow' || normalized === 'disallow') && !seenUserAgent) {
+
+    if (normalized !== 'allow' && normalized !== 'disallow') {
+      continue
+    }
+    const nonAscii = [...value].find(ch => ch.charCodeAt(0) > 0x7E)
+    if (nonAscii) {
+      issues.push({
+        severity: 'warning',
+        message: `Non-ASCII character "${nonAscii}" in path (valid UTF-8 per RFC 9309; percent-encode it for older crawlers)`,
+        line: lineNum
+      })
+    }
+    if (!seenUserAgent) {
       issues.push({
         severity: 'error',
         message: `${normalized === 'allow' ? 'Allow' : 'Disallow'} rule must follow a User-agent line`,
@@ -65,26 +67,11 @@ function collectSyntaxIssues(doc: RobotsDocument): ValidationIssue[] {
   return issues
 }
 
-function directiveNameAtLine(doc: RobotsDocument, lineNum: number): string | undefined {
-  const raw = doc.lines[lineNum - 1]
-  if (raw === undefined) {
-    return undefined
-  }
-  const content = stripComment(raw)
-  const colonIndex = content.indexOf(':')
-  if (colonIndex === -1) {
-    return undefined
-  }
-  const name = content.slice(0, colonIndex).trim()
-  return name || undefined
-}
-
 function collectDirectiveWarnings(doc: RobotsDocument): ValidationIssue[] {
   const issues: ValidationIssue[] = []
 
-  for (let i = 0; i < doc.lines.length; i++) {
+  for (const [i, raw] of doc.lines.entries()) {
     const lineNum = i + 1
-    const raw = doc.lines[i]!
     const content = stripComment(raw)
 
     if (!content) {
@@ -120,19 +107,14 @@ function collectDirectiveWarnings(doc: RobotsDocument): ValidationIssue[] {
       })
     }
 
-    if (normalized === 'useragent' || normalized === 'sitemap') {
-      continue
-    }
-
-    if (normalized === 'allow' || normalized === 'disallow') {
+    if (normalized === 'useragent' || normalized === 'sitemap' || normalized === 'allow' || normalized === 'disallow') {
       continue
     }
 
     if (NON_RFC_DIRECTIVES.has(normalized)) {
-      const directiveName = directiveNameAtLine(doc, lineNum) ?? name
       issues.push({
         severity: 'warning',
-        message: `Directive "${directiveName}" is recognized but not part of RFC 9309 (may be ignored by crawlers)`,
+        message: `Directive "${name}" is recognized but not part of RFC 9309 (may be ignored by crawlers)`,
         line: lineNum
       })
       continue
@@ -151,9 +133,7 @@ function collectDirectiveWarnings(doc: RobotsDocument): ValidationIssue[] {
 function collectSemanticIssues(doc: RobotsDocument): ValidationIssue[] {
   const issues: ValidationIssue[] = []
 
-  for (let gi = 0; gi < doc.groups.length; gi++) {
-    const group = doc.groups[gi]!
-
+  for (const group of doc.groups) {
     if (group.userAgents.length === 0 && group.directives.length > 0) {
       issues.push({
         severity: 'warning',

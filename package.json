@@ -7,27 +7,31 @@
     "dev": "nuxt dev",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "lint": "nuxt prepare && eslint .",
-    "typecheck": "nuxt typecheck",
-    "test": "pnpm --filter @robots-txt-optimizer/core --filter @maxwellcohen/robots-txt-optimizer test",
-    "build:cli": "pnpm --filter @maxwellcohen/robots-txt-optimizer build"
+    "lint": "eslint .",
+    "typecheck": "nuxt typecheck && pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "build:cli": "pnpm --filter @maxwellcohen/robots-txt-optimizer build",
+    "cli": "node packages/cli/dist/cli.mjs"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.140",
     "@nuxt/ui": "^4.11.3",
     "@robots-txt-optimizer/core": "workspace:*",
     "@vueuse/core": "^15.0.0",
-    "nuxt": "^4.6.1",
+    "nuxt": "npm:nuxt-nightly@5x",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.17.0",
     "@nuxt/test-utils": "^4.3.3",
-    "@types/node": "^26.6.4",
+    "@types/node": "catalog:",
     "eslint": "^10.12.0",
-    "typescript": "^6.0.3",
-    "vitest": "^5.0.3",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
     "vue-tsc": "^3.3.12"
   },
-  "packageManager": "pnpm@11.5.2"
+  "packageManager": "pnpm@11.5.2",
+  "engines": {
+    "node": ">=20"
+  }
 }

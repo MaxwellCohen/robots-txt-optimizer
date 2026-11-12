@@ -1,5 +1,6 @@
 import { collectUserAgentLines, findKnownCrawler, suggestCrawlerToken } from './crawlers'
 import { checkRobotsPath } from './match'
+import { CHECK_AGENTS } from './paths'
 import type { RobotsDocument, ValidationIssue } from './types'
 
 /** Asset paths used by common frameworks and CMSs that crawlers need to render pages. */
@@ -20,8 +21,6 @@ export const RENDER_RESOURCE_PATHS = [
   '/cdn/shop/t/1/assets/theme.js'
 ] as const
 
-const RENDER_CHECK_AGENTS = ['Googlebot', 'Bingbot'] as const
-
 function crawlerTokenIssues(doc: RobotsDocument): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   for (const { agent, line } of collectUserAgentLines(doc)) {
@@ -38,8 +37,8 @@ function crawlerTokenIssues(doc: RobotsDocument): ValidationIssue[] {
 }
 
 function siteBlockIssues(doc: RobotsDocument): ValidationIssue[] {
-  const root = checkRobotsPath(doc.raw, '*', '/', doc)
-  const google = checkRobotsPath(doc.raw, 'Googlebot', '/', doc)
+  const root = checkRobotsPath(doc, '*', '/')
+  const google = checkRobotsPath(doc, 'Googlebot', '/')
   const issues: ValidationIssue[] = []
 
   if (!root.allowed) {
@@ -64,13 +63,13 @@ function siteBlockIssues(doc: RobotsDocument): ValidationIssue[] {
 function renderResourceIssues(doc: RobotsDocument): ValidationIssue[] {
   const byLine = new Map<number, { pattern: string, paths: Set<string>, agents: Set<string> }>()
 
-  for (const agent of RENDER_CHECK_AGENTS) {
-    if (!checkRobotsPath(doc.raw, agent, '/', doc).allowed) {
+  for (const agent of CHECK_AGENTS) {
+    if (!checkRobotsPath(doc, agent, '/').allowed) {
       // The whole site is blocked; siteBlockIssues already reports it.
       continue
     }
     for (const path of RENDER_RESOURCE_PATHS) {
-      const result = checkRobotsPath(doc.raw, agent, path, doc)
+      const result = checkRobotsPath(doc, agent, path)
       if (result.allowed || result.matchingLine === 0) {
         continue
       }
@@ -97,7 +96,7 @@ function controlTokenIssues(doc: RobotsDocument): ValidationIssue[] {
   for (const { agent, line } of collectUserAgentLines(doc)) {
     const crawler = findKnownCrawler(agent)
     if (crawler?.token === 'Google-Extended') {
-      const google = checkRobotsPath(doc.raw, 'Googlebot', '/', doc)
+      const google = checkRobotsPath(doc, 'Googlebot', '/')
       if (!google.allowed) {
         issues.push({
           severity: 'warning',

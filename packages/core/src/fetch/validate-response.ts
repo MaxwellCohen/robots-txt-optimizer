@@ -2,7 +2,7 @@ import type { FetchResult } from '../types'
 
 export function isTextResponse(contentType: string | null): boolean {
   if (!contentType) {
-    return true
+    return false
   }
   const type = contentType.split(';')[0]?.trim().toLowerCase() ?? ''
   return type === 'text/plain' || type.startsWith('text/')

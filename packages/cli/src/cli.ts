@@ -1,5 +1,6 @@
 import { run } from './run'
 
-run(process.argv.slice(2)).then((code) => {
-  process.exitCode = code
+process.exitCode = await run(process.argv.slice(2)).catch((err: unknown) => {
+  process.stderr.write(`Error: ${err instanceof Error ? err.message : String(err)}\n`)
+  return 2
 })

@@ -1,29 +1,30 @@
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = ''
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]!)
+// Browser-only helpers: they rely on CompressionStream/DecompressionStream and are
+// only called from client-side code (mounted hooks, debounced URL sync).
+function assertClient() {
+  if (!import.meta.client) {
+    throw new Error('url-text helpers are only available in the browser')
   }
-  return btoa(binary)
 }
 
-function base64ToBytes(base64: string): Uint8Array {
-  const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i)
-  }
-  return bytes
+function bytesToBase64Url(bytes: Uint8Array): string {
+  const binary = Array.from(bytes, byte => String.fromCharCode(byte)).join('')
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
+}
+
+function base64UrlToBytes(encoded: string): Uint8Array<ArrayBuffer> {
+  // Also accepts legacy standard-base64 links ('+' may arrive as a space in query strings).
+  const base64 = encoded.replaceAll('-', '+').replaceAll('_', '/').replaceAll(' ', '+')
+  return Uint8Array.from(atob(base64), char => char.charCodeAt(0))
 }
 
 export async function compressTextForUrl(text: string): Promise<string> {
-  const input = new Blob([text])
-  const stream = input.stream().pipeThrough(new CompressionStream('gzip'))
-  const compressed = await new Response(stream).arrayBuffer()
-  return bytesToBase64(new Uint8Array(compressed))
+  assertClient()
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))
+  return bytesToBase64Url(new Uint8Array(await new Response(stream).arrayBuffer()))
 }
 
 export async function decompressTextFromUrl(encoded: string): Promise<string> {
-  const bytes = base64ToBytes(encoded)
-  const stream = new Blob([Uint8Array.from(bytes)]).stream().pipeThrough(new DecompressionStream('gzip'))
+  assertClient()
+  const stream = new Blob([base64UrlToBytes(encoded)]).stream().pipeThrough(new DecompressionStream('gzip'))
   return await new Response(stream).text()
 }

@@ -79,86 +79,57 @@ const tableData = computed(() =>
 </script>
 
 <template>
-  <UCard>
-    <UCollapsible
-      :default-open="true"
-      :unmount-on-hide="false"
-    >
-      <template #default="{ open }">
-        <div
-          class="flex w-full cursor-pointer flex-col gap-1"
-          role="button"
-          tabindex="0"
+  <RobotsCollapsibleCard
+    icon="i-lucide-route"
+    title="Path simulation"
+    :description="`Test paths against user-agents on ${SIMULATION_ORIGIN}`"
+  >
+    <div class="space-y-4">
+      <div class="grid gap-4 sm:grid-cols-2">
+        <UFormField
+          label="User-agents"
+          hint="Select or type custom user-agents"
         >
-          <div class="flex items-center gap-2">
-            <UIcon
-              name="i-lucide-route"
-              class="size-5"
-            />
-            <h2 class="font-semibold">
-              Path simulation
-            </h2>
-            <UIcon
-              name="i-lucide-chevron-down"
-              class="size-4 text-muted transition-transform duration-200"
-              :class="{ 'rotate-180': open }"
-            />
-          </div>
-          <p class="text-sm text-muted">
-            Test paths against user-agents on {{ SIMULATION_ORIGIN }}
-          </p>
-        </div>
-      </template>
+          <USelectMenu
+            v-model="selectedUserAgents"
+            :items="userAgentOptions"
+            multiple
+            create-item="always"
+            placeholder="Select user-agents"
+            class="w-full"
+            @create="onCreateUserAgent"
+          />
+        </UFormField>
 
-      <template #content>
-        <div class="mt-4 space-y-4 border-t border-default pt-4">
-          <div class="grid gap-4 sm:grid-cols-2">
-            <UFormField
-              label="User-agents"
-              hint="Select or type custom user-agents"
-            >
-              <USelectMenu
-                v-model="selectedUserAgents"
-                :items="userAgentOptions"
-                multiple
-                create-item="always"
-                placeholder="Select user-agents"
-                class="w-full"
-                @create="onCreateUserAgent"
-              />
-            </UFormField>
+        <UFormField
+          label="Paths"
+          hint="Type a path and press Enter, or paste multiple paths separated by newlines, spaces, or commas"
+        >
+          <UInputTags
+            v-model="paths"
+            add-on-paste
+            :delimiter="SIMULATION_PATH_DELIMITER"
+            :convert-value="normalizeSimulationPath"
+            placeholder="/your-path"
+            class="w-full font-mono"
+          />
+        </UFormField>
+      </div>
 
-            <UFormField
-              label="Paths"
-              hint="Type a path and press Enter, or paste multiple paths separated by newlines, spaces, or commas"
-            >
-              <UInputTags
-                v-model="paths"
-                add-on-paste
-                :delimiter="SIMULATION_PATH_DELIMITER"
-                :convert-value="normalizeSimulationPath"
-                placeholder="/your-path"
-                class="w-full font-mono"
-              />
-            </UFormField>
-          </div>
-
-          <UTable
-            v-if="tableData.length > 0"
-            :data="tableData"
-            :columns="columns"
+      <UTable
+        v-if="tableData.length > 0"
+        :data="tableData"
+        :columns="columns"
+      >
+        <template #verdict-cell="{ row }">
+          <UBadge
+            :color="row.original.verdictColor"
+            variant="subtle"
           >
-            <template #verdict-cell="{ row }">
-              <UBadge
-                :color="row.original.verdictColor"
-                variant="subtle"
-              >
-                {{ row.original.verdict }}
-              </UBadge>
-            </template>
-          </UTable>
-        </div>
-      </template>
-    </UCollapsible>
-  </UCard>
+            {{ row.original.verdict }}
+          </UBadge>
+        </template>
+      </UTable>
+    </div>
+  </RobotsCollapsibleCard>
 </template>

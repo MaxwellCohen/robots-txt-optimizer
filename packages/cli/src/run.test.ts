@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { run, type CliIO } from './run'
 
-function createIO(files: Record<string, string>, responses: Record<string, string> = {}) {
+function createIO(files: Record<string, string>, responses: Record<string, string> = {}, stdin = '') {
   let stdout = ''
   let stderr = ''
   const written: Record<string, string> = {}
@@ -12,6 +12,7 @@ function createIO(files: Record<string, string>, responses: Record<string, strin
       if (path in files) return files[path]!
       throw Object.assign(new Error('missing'), { code: 'ENOENT' })
     },
+    readStdin: async () => stdin,
     writeFile: async (path, text) => { written[path] = text },
     fetch: (async (url: string) => url in responses
       ? new Response(responses[url])
@@ -102,6 +103,33 @@ describe('check', () => {
     expect(await run(['check', 'missing.txt'], io)).toBe(2)
     expect(err()).toContain('File not found')
     expect(await run(['frobnicate'], io)).toBe(2)
+  })
+
+  it('returns 2 for bad flags and missing arguments', async () => {
+    const { io, err } = createIO({})
+    expect(await run(['check'], io)).toBe(2)
+    expect(await run(['check', 'robots.txt', '--nope'], io)).toBe(2)
+    expect(await run(['check', 'robots.txt', '--fail-on', 'bogus'], createIO({ 'robots.txt': robots }).io)).toBe(2)
+    expect(err()).toContain('Error:')
+  })
+
+  it('returns 2 when no command is given', async () => {
+    const { io, out } = createIO({})
+    expect(await run([], io)).toBe(2)
+    expect(out()).toContain('Usage:')
+  })
+
+  it('reads robots.txt from stdin with "-"', async () => {
+    const { io, out } = createIO({}, {}, 'User-agent: *\nDisallow: /admin\n')
+    expect(await run(['check', '-', '--expect-blocked', 'Googlebot:/admin'], io)).toBe(0)
+    expect(out()).toContain('robots.txt check: stdin')
+    expect(out()).toContain('✔ Passed')
+  })
+
+  it('rejects --write with stdin', async () => {
+    const { io, err } = createIO({}, {}, robots)
+    expect(await run(['optimize', '-', '--write'], io)).toBe(2)
+    expect(err()).toContain('--write requires a local file input')
   })
 })
 

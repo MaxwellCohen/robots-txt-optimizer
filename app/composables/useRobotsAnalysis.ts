@@ -1,8 +1,7 @@
 import { useDebounceFn } from '@vueuse/core'
-import type { RobotsAnalysis } from '@robots-txt-optimizer/core'
+import { analyzeRobotsTxt, type RobotsAnalysis } from '@robots-txt-optimizer/core'
 
 export function useRobotsAnalysis() {
-  const robotsText = ref('')
   const analysis = ref<RobotsAnalysis | null>(null)
   const analyzing = ref(false)
 
@@ -14,8 +13,6 @@ export function useRobotsAnalysis() {
 
     analyzing.value = true
     try {
-      const { analyzeRobotsTxt } = await import('@robots-txt-optimizer/core')
-      robotsText.value = text
       analysis.value = analyzeRobotsTxt(text)
     } finally {
       analyzing.value = false
@@ -27,7 +24,6 @@ export function useRobotsAnalysis() {
   }, 400)
 
   return {
-    robotsText,
     analysis,
     analyzing: readonly(analyzing),
     runAnalysis,

@@ -1,56 +1,12 @@
 import { isUserAgentLineContent, stripComment } from './parse'
 import { checkRobotsPath, findApplicableGroups } from './match'
 import { normalizeUserAgentForMatch } from './robots-text'
-import type { RobotsDocument } from './types'
+import { AI_TRAINING_POLICY_TOKEN, CRAWLER_CATEGORY_LABELS, KNOWN_CRAWLERS } from './crawlers-data'
+import type { CrawlerAccess, CrawlerAccessStatus, RobotsDocument } from './types'
+import type { CrawlerCategory, KnownCrawler } from './crawlers-data'
 
-export type CrawlerCategory = 'search' | 'ai-training' | 'ai-search' | 'ai-user'
-
-export interface KnownCrawler {
-  /** Product token used in `User-agent:` lines. */
-  token: string
-  operator: string
-  category: CrawlerCategory
-  description: string
-  /** Token only controls usage; the operator crawls with another bot (e.g. Google-Extended). */
-  controlToken?: boolean
-}
-
-export const CRAWLER_CATEGORY_LABELS: Record<CrawlerCategory, string> = {
-  'search': 'Search engines',
-  'ai-training': 'AI training',
-  'ai-search': 'AI search',
-  'ai-user': 'AI user-triggered fetches'
-}
-
-/** Shared policy token for AI training; not a crawler, and never matched by `User-agent: *`. */
-export const AI_TRAINING_POLICY_TOKEN = '__usage_ai-training'
-
-export const KNOWN_CRAWLERS: readonly KnownCrawler[] = [
-  { token: 'Googlebot', operator: 'Google', category: 'search', description: 'Google Search crawler' },
-  { token: 'Bingbot', operator: 'Microsoft', category: 'search', description: 'Bing Search crawler (also powers Copilot answers)' },
-  { token: 'Applebot', operator: 'Apple', category: 'search', description: 'Siri and Spotlight search crawler' },
-  { token: 'DuckDuckBot', operator: 'DuckDuckGo', category: 'search', description: 'DuckDuckGo search crawler' },
-  { token: 'YandexBot', operator: 'Yandex', category: 'search', description: 'Yandex search crawler' },
-  { token: 'Baiduspider', operator: 'Baidu', category: 'search', description: 'Baidu search crawler' },
-
-  { token: 'GPTBot', operator: 'OpenAI', category: 'ai-training', description: 'Collects content to train OpenAI models' },
-  { token: 'ClaudeBot', operator: 'Anthropic', category: 'ai-training', description: 'Collects content to train Anthropic models' },
-  { token: AI_TRAINING_POLICY_TOKEN, operator: 'Shared (IETF AIPREF)', category: 'ai-training', description: 'Provider-neutral AI training preference signal (draft-kelley-aipref-training-preference-signal); `User-agent: *` groups do not apply to it', controlToken: true },
-  { token: 'Google-Extended', operator: 'Google', category: 'ai-training', description: 'Controls use of Googlebot-crawled content for Gemini training and grounding; does not affect Google Search', controlToken: true },
-  { token: 'Applebot-Extended', operator: 'Apple', category: 'ai-training', description: 'Controls use of Applebot-crawled content for Apple AI training', controlToken: true },
-  { token: 'CCBot', operator: 'Common Crawl', category: 'ai-training', description: 'Open web crawl widely used as AI training data' },
-  { token: 'Meta-ExternalAgent', operator: 'Meta', category: 'ai-training', description: 'Collects content to train Meta AI models' },
-  { token: 'Bytespider', operator: 'ByteDance', category: 'ai-training', description: 'Collects content for ByteDance AI models' },
-  { token: 'Amazonbot', operator: 'Amazon', category: 'ai-training', description: 'Amazon crawler used for Alexa and AI services' },
-
-  { token: 'OAI-SearchBot', operator: 'OpenAI', category: 'ai-search', description: 'Indexes pages for ChatGPT search results' },
-  { token: 'Claude-SearchBot', operator: 'Anthropic', category: 'ai-search', description: 'Indexes pages for Claude search results' },
-  { token: 'PerplexityBot', operator: 'Perplexity', category: 'ai-search', description: 'Indexes pages for Perplexity answers' },
-
-  { token: 'ChatGPT-User', operator: 'OpenAI', category: 'ai-user', description: 'Fetches pages when a ChatGPT user asks about them' },
-  { token: 'Claude-User', operator: 'Anthropic', category: 'ai-user', description: 'Fetches pages when a Claude user asks about them' },
-  { token: 'Perplexity-User', operator: 'Perplexity', category: 'ai-user', description: 'Fetches pages when a Perplexity user asks about them' }
-]
+export { AI_TRAINING_POLICY_TOKEN, CRAWLER_CATEGORY_LABELS, KNOWN_CRAWLERS }
+export type { CrawlerAccess, CrawlerAccessStatus, CrawlerCategory, KnownCrawler }
 
 /** Retired or non-existent tokens people commonly use, with the token that actually works. */
 const TOKEN_REPLACEMENTS: Record<string, string> = {
@@ -64,19 +20,6 @@ const TOKEN_REPLACEMENTS: Record<string, string> = {
   googlebard: 'Google-Extended',
   perplexity: 'PerplexityBot',
   facebookbot: 'Meta-ExternalAgent'
-}
-
-export type CrawlerAccessStatus = 'allowed' | 'partial' | 'blocked'
-
-export interface CrawlerAccess {
-  crawler: KnownCrawler
-  status: CrawlerAccessStatus
-  /** User-agent values of the group(s) that apply to this crawler. */
-  matchedAgents: string[]
-  /** True when a group names this crawler (or a prefix of it) rather than falling back to `*`. */
-  hasSpecificGroup: boolean
-  /** Line of the rule that decides access to `/`, or 0 for the default. */
-  line: number
 }
 
 export interface UserAgentLine {
@@ -114,7 +57,7 @@ export function analyzeCrawlerAccess(
   return crawlers.map((crawler) => {
     const groups = findApplicableGroups(doc, crawler.token)
     const specific = groups.some(group => group.userAgents.some(agent => agent.trim() !== '*'))
-    const root = checkRobotsPath(doc.raw, crawler.token, '/', doc)
+    const root = checkRobotsPath(doc, crawler.token, '/')
     const hasDisallow = groups.some(group =>
       group.directives.some(directive => directive.type === 'disallow' && directive.value !== '')
     )
@@ -142,21 +85,19 @@ export function findKnownCrawler(token: string): KnownCrawler | undefined {
 }
 
 function levenshtein(a: string, b: string): number {
-  const row = Array.from({ length: b.length + 1 }, (_, i) => i)
+  let row = Array.from({ length: b.length + 1 }, (_, i) => i)
   for (let i = 1; i <= a.length; i++) {
-    let previous = row[0]!
-    row[0] = i
+    const next = [i]
     for (let j = 1; j <= b.length; j++) {
-      const current = row[j]!
-      row[j] = Math.min(
-        row[j]! + 1,
-        row[j - 1]! + 1,
-        previous + (a[i - 1] === b[j - 1] ? 0 : 1)
-      )
-      previous = current
+      next.push(Math.min(
+        (row[j] ?? 0) + 1,
+        (next[j - 1] ?? 0) + 1,
+        (row[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1)
+      ))
     }
+    row = next
   }
-  return row[b.length]!
+  return row[b.length] ?? 0
 }
 
 /** Suggests the intended token for a user-agent value that looks like a typo or retired name. */
@@ -274,7 +215,7 @@ export function applyCrawlerPolicy(doc: RobotsDocument, policy: CrawlerPolicy): 
       return
     }
     const nextGroup = doc.groups[groupIndex + 1]
-    const lastDirectiveLine = group.directives.at(-1)?.line ?? lines.at(-1)!.line
+    const lastDirectiveLine = group.directives.at(-1)?.line ?? lines.at(-1)?.line ?? group.startLine
     const end = nextGroup ? Math.min(nextGroup.startLine - 1, lastDirectiveLine) : lastDirectiveLine
     for (let line = group.startLine; line <= end; line++) {
       removed.add(line)
@@ -306,8 +247,8 @@ export function applyCrawlerPolicy(doc: RobotsDocument, policy: CrawlerPolicy): 
   const sitemapPattern = /^\s*sitemap\s*:/i
   const bodyLines = body.split('\n')
   const trailingSitemaps: string[] = []
-  while (bodyLines.length && (sitemapPattern.test(bodyLines.at(-1)!) || !bodyLines.at(-1)!.trim())) {
-    const line = bodyLines.pop()!
+  for (let last = bodyLines.at(-1); last !== undefined && (sitemapPattern.test(last) || !last.trim()); last = bodyLines.at(-1)) {
+    const line = bodyLines.pop() ?? ''
     if (line.trim()) {
       trailingSitemaps.unshift(line)
     }
