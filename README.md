@@ -15,6 +15,9 @@ Built with [Nuxt](https://nuxt.com) and [Nuxt UI](https://ui.nuxt.com).
 ## CLI
 
 ```bash
+npx @maxwellcohen/robots-txt-optimizer check example.com --check-sitemaps --fail-on warning
+
+# from a checkout
 pnpm build:cli
 pnpm cli check public/robots.txt --expect-allowed "Googlebot:/" --expect-blocked "GPTBot:/"
 pnpm cli check example.com --check-sitemaps --fail-on warning

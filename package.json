@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "typecheck": "nuxt typecheck && pnpm -r typecheck",
     "test": "pnpm -r test",
-    "build:cli": "pnpm --filter @robots-txt-optimizer/cli build",
+    "build:cli": "pnpm --filter @maxwellcohen/robots-txt-optimizer build",
     "cli": "node packages/cli/dist/cli.mjs"
   },
   "dependencies": {

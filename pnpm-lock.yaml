@@ -83,11 +83,10 @@ importers:
         version: 3.3.14(typescript@6.0.3)
 
   packages/cli:
-    dependencies:
+    devDependencies:
       '@robots-txt-optimizer/core':
         specifier: workspace:*
         version: link:../core
-    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.6
@@ -102,10 +101,6 @@ importers:
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/core:
-    dependencies:
-      robots-linter:
-        specifier: ^0.7.0
-        version: 0.7.0
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1975,10 +1970,6 @@ packages:
   colortranslator@5.0.0:
     resolution: {integrity: sha512-Z3UPUKasUVDFCDYAjP2fmlVRf1jFHJv1izAmPjiOa0OCIw1W7iC8PZ2GsoDa8uZv+mKyWopxxStT9q05+27h7w==}
 
-  commander@11.1.0:
-    resolution: {integrity: sha512-yPVavfyCcRhmorC7rWlkHn15b4wDVgVmBA7kV4QVBsF7kv/9TKJAbAXVTxvTnwP8HHKjRCJDClKbciiYS7p0DQ==}
-    engines: {node: '>=16'}
-
   comment-parser@1.4.7:
     resolution: {integrity: sha512-0h+uSNtQGW3D98eQt3jJ8L06Fves8hncB4V/PKdw/Qb8Hnk19VaKuTr55UNRYiSoVa7WwrFls+rh3ux9agmkeQ==}
     engines: {node: '>= 12.0.0'}
@@ -3115,10 +3106,6 @@ packages:
   retry@0.12.0:
     resolution: {integrity: sha512-9LkiTwjUh6rT555DtE9rTX+BKByPfrMzEAtnlEtdEwr3Nkffwiihqe2bWADg+OQRjt9gl6ICdmB/ZFDCGAtSow==}
     engines: {node: '>= 4'}
-
-  robots-linter@0.7.0:
-    resolution: {integrity: sha512-C61u+qUvExmlvJGnkL8C63weW5UOscdZKy6hkbBIL1c1Wr/kIvuxfgUIcijqcYLy+s1/mT2HpHkjH3sSBOvpiQ==}
-    hasBin: true
 
   rolldown-string@0.3.1:
     resolution: {integrity: sha512-dv8GOXkYqUQdI0rsXB8hmzO95pKWSuX2eg5/JSJa9czfEVIFuKNR7ZJDfat8LlmD35RAhWY+evS7/wXXqFDfSg==}
@@ -5863,8 +5850,6 @@ snapshots:
 
   colortranslator@5.0.0: {}
 
-  commander@11.1.0: {}
-
   comment-parser@1.4.7: {}
 
   comment-parser@1.4.9: {}
@@ -7137,10 +7122,6 @@ snapshots:
   resolve-pkg-maps@1.0.0: {}
 
   retry@0.12.0: {}
-
-  robots-linter@0.7.0:
-    dependencies:
-      commander: 11.1.0
 
   rolldown-string@0.3.1(rolldown@1.2.16):
     dependencies:

@@ -1,49 +1,70 @@
-import { parse as lintParse } from 'robots-linter'
-import { isUserAgentLineContent, normalizeDirectiveName, stripComment } from './parse'
-import { textForLint } from './robots-text'
+import { normalizeDirectiveName, stripComment } from './parse'
 import type { RobotsDocument, ValidationIssue, ValidationResult } from './types'
 import { collectCrawlabilityIssues } from './checks'
 
 const NON_RFC_DIRECTIVES = new Set(['crawldelay', 'host', 'contentsignal'])
 const MAX_LINE_LENGTH = 4096
 
-function isUnexpectedCharacterError(message: string): boolean {
-  return message.includes('Unexpected Character')
-}
+const PRODUCT_TOKEN = /^[0-9a-zA-Z_-]+$/
 
-function isInvalidProductTokenError(message: string): boolean {
-  return message.includes('Product token MUST only contains')
-}
+/** Native RFC 9309 syntax checks. */
+function collectSyntaxIssues(doc: RobotsDocument): ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+  let seenUserAgent = false
 
-function isUnexpectedTokenError(message: string): boolean {
-  return message.includes('Unexpected Token')
-}
+  for (const [i, raw] of doc.lines.entries()) {
+    const lineNum = i + 1
+    const content = stripComment(raw)
+    if (!content) {
+      continue
+    }
 
-function issueFromParseError(err: unknown, doc: RobotsDocument): ValidationIssue | null {
-  if (!(err instanceof Error)) {
-    return null
+    // eslint-disable-next-line no-control-regex
+    if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(content)) {
+      issues.push({ severity: 'error', message: 'Unexpected control character', line: lineNum })
+      continue
+    }
+
+    const colonIndex = content.indexOf(':')
+    if (colonIndex === -1) {
+      continue
+    }
+    const normalized = normalizeDirectiveName(content.slice(0, colonIndex))
+    const value = content.slice(colonIndex + 1).trim()
+
+    if (normalized === 'useragent') {
+      seenUserAgent = true
+      if (value !== '*' && value && !PRODUCT_TOKEN.test(value)) {
+        issues.push({
+          severity: 'warning',
+          message: 'Product token should only contain letters, digits, "_" and "-"',
+          line: lineNum
+        })
+      }
+      continue
+    }
+
+    if (normalized !== 'allow' && normalized !== 'disallow') {
+      continue
+    }
+    const nonAscii = [...value].find(ch => ch.charCodeAt(0) > 0x7E)
+    if (nonAscii) {
+      issues.push({
+        severity: 'warning',
+        message: `Non-ASCII character "${nonAscii}" in path (valid UTF-8 per RFC 9309; percent-encode it for older crawlers)`,
+        line: lineNum
+      })
+    }
+    if (!seenUserAgent) {
+      issues.push({
+        severity: 'error',
+        message: `${normalized === 'allow' ? 'Allow' : 'Disallow'} rule must follow a User-agent line`,
+        line: lineNum
+      })
+    }
   }
-  const lineMatch = err.message.match(/line[:\s]+(\d+)/i)
-    ?? err.message.match(/at line (\d+)/i)
-  const line = lineMatch ? Number(lineMatch[1]) : undefined
 
-  if (
-    line !== undefined
-    && (
-      isUnexpectedCharacterError(err.message)
-      || isInvalidProductTokenError(err.message)
-      || isUnexpectedTokenError(err.message)
-    )
-    && isUserAgentLineContent(doc.lines[line - 1] ?? '')
-  ) {
-    return null
-  }
-
-  return {
-    severity: 'error',
-    message: err.message,
-    line
-  }
+  return issues
 }
 
 function collectDirectiveWarnings(doc: RobotsDocument): ValidationIssue[] {
@@ -196,20 +217,7 @@ function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] {
 export function validateRobotsDocument(doc: RobotsDocument): ValidationResult {
   const issues: ValidationIssue[] = []
 
-  try {
-    lintParse(textForLint(doc))
-  } catch (err) {
-    const issue = issueFromParseError(err, doc)
-    if (issue) {
-      issues.push(issue)
-    } else if (!(err instanceof Error)) {
-      issues.push({
-        severity: 'error',
-        message: 'Failed to parse robots.txt'
-      })
-    }
-  }
-
+  issues.push(...collectSyntaxIssues(doc))
   issues.push(...collectDirectiveWarnings(doc))
   issues.push(...collectSemanticIssues(doc))
   issues.push(...collectCrawlabilityIssues(doc))

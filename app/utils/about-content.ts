@@ -51,7 +51,7 @@ export const aboutFeatures = [
     icon: 'i-lucide-shield-check',
     title: 'Validation',
     description:
-      'Syntax checks via robots-linter plus semantic warnings: missing colons, unknown directives, invalid sitemap URLs, and more.'
+      'RFC 9309 syntax checks plus semantic warnings: missing colons, unknown directives, invalid sitemap URLs, and more.'
   },
   {
     icon: 'i-lucide-list-tree',
@@ -102,3 +102,12 @@ export const aboutFeatures = [
       'Run the same checks in CI to stop a bad robots.txt from shipping, or call the JSON API from your own tools.'
   }
 ] as const
+
+export const aboutAiPrompt = `Optimize the robots.txt for my website using @maxwellcohen/robots-txt-optimizer.
+
+1. Run: npx @maxwellcohen/robots-txt-optimizer check <my-site-url-or-path/robots.txt> --check-sitemaps
+2. Fix every error and warning, then run: npx @maxwellcohen/robots-txt-optimizer optimize robots.txt --write
+3. Decide my AI crawler policy (block AI training but keep AI search?) and apply it with --ai block-ai-training.
+4. Verify important URLs with --expect-allowed "Googlebot:/" and sensitive ones (admin, staging, private) with --expect-blocked "Googlebot:/admin".
+5. Make sure CSS/JS and my sitemap URLs are not blocked, and that Sitemap: lines are present.
+6. Show me a diff of the final file and explain each change.`

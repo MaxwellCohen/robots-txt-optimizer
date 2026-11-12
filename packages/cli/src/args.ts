@@ -14,6 +14,7 @@ export function parseCliArgs(argv: string[]) {
     allowPositionals: true,
     options: {
       'help': { type: 'boolean', short: 'h' },
+      'version': { type: 'boolean', short: 'v' },
       'fail-on': { type: 'string' },
       'expect-allowed': { type: 'string', multiple: true },
       'expect-blocked': { type: 'string', multiple: true },

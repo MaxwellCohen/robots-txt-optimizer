@@ -13,6 +13,7 @@ import { secureFetchSitemaps } from '@robots-txt-optimizer/core/node'
 import { AI_PRESETS, isAiPreset, parseCliArgs, parseExpectation, UsageError, type CliValues } from './args'
 import { escapeAnnotation, HELP, printCheckText, type CheckFailure } from './format'
 import { defaultIO, loadInput, type CliIO, type LoadedInput } from './io'
+import pkg from '../package.json' with { type: 'json' }
 
 export { defaultIO, type CliIO } from './io'
 
@@ -194,11 +195,31 @@ function runCrawlers(input: LoadedInput, values: CliValues, io: CliIO): number {
   return 0
 }
 
+/**
+ * Guards commands that act on the file's content: a failed fetch must not be
+ * read as an empty (allow-all) robots.txt. A 404 genuinely means "no rules".
+ */
+function requireFetched(input: LoadedInput, io: CliIO, options: { allowMissing: boolean }): void {
+  const status = input.fetchStatus
+  if (status === undefined || (status >= 200 && status < 300)) {
+    return
+  }
+  if (status === 404 && options.allowMissing) {
+    io.stderr(`Note: ${input.label} returned HTTP 404; treating it as an empty robots.txt (everything allowed)\n`)
+    return
+  }
+  throw new UsageError(`Could not fetch ${input.label}: HTTP ${status}`)
+}
+
 export async function run(argv: string[], io: CliIO = defaultIO): Promise<number> {
   try {
     const { values, positionals } = parseCliArgs(argv)
 
     const [command, ...args] = positionals
+    if (values.version) {
+      io.stdout(`${pkg.version}\n`)
+      return 0
+    }
     if (values.help || !command) {
       io.stdout(HELP)
       return command || values.help ? 0 : 2
@@ -213,6 +234,7 @@ export async function run(argv: string[], io: CliIO = defaultIO): Promise<number
         }
         const input = await loadInput(args[0]!, io)
         if (command === 'check') return await runCheck(input, values, io)
+        requireFetched(input, io, { allowMissing: command === 'crawlers' })
         if (command === 'optimize') return await runOptimize(input, values, io)
         return runCrawlers(input, values, io)
       }
@@ -221,6 +243,8 @@ export async function run(argv: string[], io: CliIO = defaultIO): Promise<number
           throw new UsageError('compare takes <before> <after>')
         }
         const [before, after] = await Promise.all(args.map(arg => loadInput(arg, io)))
+        requireFetched(before!, io, { allowMissing: true })
+        requireFetched(after!, io, { allowMissing: true })
         return await runCompare(before!, after!, values, io)
       }
       default:

@@ -26,6 +26,8 @@ optimize options:
   --ai <preset>            Also apply an AI crawler policy:
                            block-ai-training, block-all-ai, allow-all-ai
 
+Run with --version to print the CLI version.
+
 Exit codes: 0 success, 1 check failed, 2 usage or input error.
 `
 

@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useClipboard } from '@vueuse/core'
+
+const { copy, copied } = useClipboard({ source: aboutAiPrompt })
+
 useSeoMeta({
   title: 'About robots.txt',
   description:
@@ -169,6 +173,31 @@ useSeoMeta({
             </dl>
           </div>
         </div>
+      </div>
+    </UCard>
+
+    <UCard>
+      <div class="space-y-4">
+        <div class="flex items-center gap-2">
+          <UIcon
+            name="i-lucide-bot"
+            class="size-5 text-primary"
+          />
+          <h2 class="text-xl font-semibold">
+            Prompt for your AI assistant
+          </h2>
+        </div>
+        <p class="text-sm text-muted leading-relaxed">
+          Paste this into Claude Code, Cursor, or any coding agent to validate and optimize your website's robots.txt with the CLI.
+        </p>
+        <pre class="rounded-lg border border-default bg-elevated p-4 text-xs whitespace-pre-wrap">{{ aboutAiPrompt }}</pre>
+        <UButton
+          :icon="copied ? 'i-lucide-check' : 'i-lucide-copy'"
+          variant="subtle"
+          @click="copy(aboutAiPrompt)"
+        >
+          {{ copied ? 'Copied' : 'Copy prompt' }}
+        </UButton>
       </div>
     </UCard>
 
