@@ -10,6 +10,36 @@ npx @maxwellcohen/robots-txt-optimizer compare staging.example.com example.com
 
 Every command takes a local path, `-` for stdin, or a URL/domain (`example.com` fetches `https://example.com/robots.txt`).
 
+## Install
+
+No install is needed with `npx`. To pin it in a project or use the short `robots-txt-optimizer` command:
+
+```sh
+npm install --save-dev @maxwellcohen/robots-txt-optimizer   # per project
+npm install --global @maxwellcohen/robots-txt-optimizer     # everywhere
+```
+
+```json
+{
+  "scripts": {
+    "check:robots": "robots-txt-optimizer check public/robots.txt --expect-allowed \"Googlebot:/\""
+  }
+}
+```
+
+## Example
+
+```console
+$ robots-txt-optimizer check robots.txt --expect-blocked "GPTBot:/"
+robots.txt check: robots.txt
+  ⚠ line 6: Directive "Crawl-delay" is recognized but not part of RFC 9309 (may be ignored by crawlers)
+  ⚠ line 5: Disallow "/assets/*.css" blocks CSS/JavaScript that Googlebot and Bingbot need to render pages (e.g. /assets/style.css)
+  ⚠ line 8: User-agent "GPT-Bot" is not a recognized crawler token — did you mean GPTBot?
+  ✖ Expected GPTBot to be blocked on /, but it is allowed
+
+✖ 1 problem(s) failed the check
+```
+
 ## Commands
 
 ### `check <file|url>`
@@ -53,7 +83,17 @@ Lists access status for known search, AI training, AI search and user-triggered 
 
 A URL that returns 404 is treated as an empty robots.txt (everything allowed) by `compare` and `crawlers`, and is reported by `check`. Any other failed fetch is an error rather than an empty file.
 
-## GitHub Action
+## CI
+
+In any CI system, run `check` and let the exit code fail the job:
+
+```sh
+npx @maxwellcohen/robots-txt-optimizer check public/robots.txt --fail-on warning --check-sitemaps
+```
+
+`--format json` gives machine-readable output; `--format github` emits workflow annotations on the offending lines.
+
+### GitHub Action
 
 The same CLI is available as an action:
 
@@ -70,6 +110,11 @@ The same CLI is available as an action:
 ## Matching rules
 
 Path matching follows RFC 9309: `*` wildcards, a trailing `$` anchor, longest match wins, and allow wins ties. Percent-encoded characters such as `%2A`, `%24` and `%2F` are matched literally.
+
+## Links
+
+- [Source and issues](https://github.com/MaxwellCohen/robots-txt-optimizer)
+- [Web app, JSON API and GitHub Action docs](https://github.com/MaxwellCohen/robots-txt-optimizer#readme)
 
 ## License
 
