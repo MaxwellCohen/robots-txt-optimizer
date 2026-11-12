@@ -14,7 +14,7 @@ jobs:
     environment: npm-publish
     permissions:
       contents: read
-      id-token: write # npm trusted publishing + provenance
+      id-token: write # npm trusted publishing (stage only) + provenance
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -30,6 +30,8 @@ jobs:
             echo "::error::Tag $GITHUB_REF_NAME does not match packages/cli version $version (expected cli-v$version)"
             exit 1
           fi
+      # `npm stage` needs npm 11.15.0 or newer.
+      - run: npm install -g npm@^11.15.0
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm build:cli
@@ -38,6 +40,6 @@ jobs:
         run: |
           npm pack --dry-run --json | tee /dev/stderr >/dev/null
           node -e "const p=require('./package.json');const bad=['preinstall','install','postinstall'].filter(k=>p.scripts?.[k]);if(bad.length||p.dependencies){console.error('unexpected',bad,p.dependencies);process.exit(1)}"
-      - name: Publish
+      - name: Stage for publishing (a maintainer approves with `npm stage approve`)
         working-directory: packages/cli
-        run: npm publish --provenance --access public
+        run: npm stage publish --provenance --access public
