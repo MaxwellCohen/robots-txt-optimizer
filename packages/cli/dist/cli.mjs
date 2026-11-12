@@ -2012,7 +2012,7 @@ import { readFile, writeFile } from "node:fs/promises";
 // package.json
 var package_default = {
   name: "@maxwellcohen/robots-txt-optimizer",
-  version: "0.1.0",
+  version: "0.1.1",
   description: "Validate, test, and optimize robots.txt files from the command line or CI",
   type: "module",
   bin: {
