@@ -1,5 +1,6 @@
 import { RobotsFetchError } from './errors'
 import type { FetchResult } from '../types'
+import { readCapped } from './read-capped'
 
 // Above Google's 500 KiB processing limit so oversized files can still be diagnosed.
 const DEFAULT_MAX_BYTES = 2 * 1024 * 1024
@@ -40,19 +41,16 @@ export async function fetchRobotsTxt(
       redirect: 'follow'
     })
 
+    const tooLarge = () => new RobotsFetchError('robots.txt response is too large', 'TOO_LARGE')
     const contentLength = Number(response.headers.get('content-length') || 0)
     if (contentLength > maxBytes) {
-      throw new RobotsFetchError('robots.txt response is too large', 'TOO_LARGE')
+      await response.body?.cancel()
+      throw tooLarge()
     }
 
-    const buffer = await response.arrayBuffer()
-    if (buffer.byteLength > maxBytes) {
-      throw new RobotsFetchError('robots.txt response is too large', 'TOO_LARGE')
-    }
-
-    const bytes = new Uint8Array(buffer)
+    const bytes = await readCapped(response, maxBytes, tooLarge)
     const hasBom = bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF
-    const text = new TextDecoder('utf-8', { fatal: false }).decode(buffer)
+    const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes)
     const finalUrl = response.url || url.toString()
 
     return {
@@ -62,7 +60,7 @@ export async function fetchRobotsTxt(
       contentType: response.headers.get('content-type'),
       source,
       redirected: response.redirected || finalUrl !== url.toString(),
-      bytes: buffer.byteLength,
+      bytes: bytes.byteLength,
       hasBom
     }
   } catch (err) {

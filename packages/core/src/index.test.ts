@@ -67,7 +67,7 @@ Disallow: /admin`
 
     expect(result.validation.ok).toBe(true)
     expect(result.validation.issues.some(i => i.severity === 'error')).toBe(false)
-    expect(result.validation.issues.some(i => i.message.includes('Unexpected Character'))).toBe(false)
+    expect(result.validation.issues.some(i => i.message.includes('Non-ASCII character'))).toBe(false)
     expect(result.validation.issues.some(i => i.message.includes('Failed to parse'))).toBe(false)
   })
 
@@ -95,14 +95,14 @@ Disallow: /`
     expect(verdict?.allowed).toBe(false)
   })
 
-  it('still reports unexpected characters on non-user-agent lines', () => {
+  it('warns (but does not fail) on non-ASCII characters in paths', () => {
     const text = `User-agent: *
 Disallow: /adminâ/`
 
     const result = analyzeRobotsTxt(text)
 
-    expect(result.validation.ok).toBe(false)
-    expect(result.validation.issues.some(i => i.message.includes('Unexpected Character'))).toBe(true)
+    expect(result.validation.ok).toBe(true)
+    expect(result.validation.issues.some(i => i.severity === 'warning' && i.message.includes('Non-ASCII character'))).toBe(true)
   })
 
   it('simulates longest-match allow over disallow', () => {

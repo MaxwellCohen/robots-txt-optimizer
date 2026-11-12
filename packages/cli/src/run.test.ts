@@ -75,6 +75,28 @@ describe('check', () => {
     expect(await run(['check', 'example.com'], io)).toBe(1)
   })
 
+  it('refuses to treat a failed fetch as an empty file', async () => {
+    const { io, out, err } = createIO({})
+    io.fetch = (async () => new Response('down', { status: 503 })) as typeof fetch
+    expect(await run(['crawlers', 'example.com'], io)).toBe(2)
+    expect(await run(['optimize', 'example.com'], io)).toBe(2)
+    expect(await run(['compare', 'example.com', 'example.org'], io)).toBe(2)
+    expect(out()).toBe('')
+    expect(err()).toContain('HTTP 503')
+  })
+
+  it('treats a 404 as an empty robots.txt for crawlers', async () => {
+    const { io, err } = createIO({})
+    expect(await run(['crawlers', 'example.com'], io)).toBe(0)
+    expect(err()).toContain('HTTP 404')
+  })
+
+  it('prints the version', async () => {
+    const { io, out } = createIO({})
+    expect(await run(['--version'], io)).toBe(0)
+    expect(out()).toMatch(/^\d+\.\d+\.\d+/)
+  })
+
   it('returns 2 for usage errors', async () => {
     const { io, err } = createIO({})
     expect(await run(['check', 'missing.txt'], io)).toBe(2)

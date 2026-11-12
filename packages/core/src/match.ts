@@ -1,4 +1,3 @@
-import { decodePath } from 'robots-linter'
 import type { Directive, RobotsDocument, UserAgentGroup } from './types'
 import { parseRobotsTxt } from './parse'
 import { normalizeUserAgentForMatch, userAgentMatches } from './robots-text'
@@ -46,20 +45,33 @@ export interface CompiledPathRule {
 }
 
 export function compilePathRule(type: 'allow' | 'disallow', path: string): CompiledPathRule {
-  const decoded = safeDecodePath(path)
+  const normalized = normalizePathForMatch(path)
   return {
     type: type === 'allow' ? 'ALLOW' : 'DISALLOW',
-    path: decoded,
-    regex: toRegExpPath(decoded)
+    path: normalized,
+    regex: toRegExpPath(normalized)
   }
 }
 
-function safeDecodePath(path: string): string {
-  try {
-    return decodePath(path)
-  } catch {
-    return path
-  }
+/**
+ * RFC 9309 §2.2.2 comparison form: percent-encoded unreserved characters are
+ * decoded, every other escape is kept (upper-cased) and non-ASCII is
+ * percent-encoded. Escapes such as `%2A`, `%24` and `%2F` therefore stay
+ * literal and never turn into `*`, `$` or `/`.
+ */
+function normalizePathForMatch(path: string): string {
+  return path
+    .replace(/%([0-9a-fA-F]{2})/g, (_, hex: string) => {
+      const char = String.fromCharCode(Number.parseInt(hex, 16))
+      return /[A-Za-z0-9\-._~]/.test(char) ? char : `%${hex.toUpperCase()}`
+    })
+    .replace(/[\u0080-\uffff]+/g, (chars) => {
+      try {
+        return encodeURIComponent(chars)
+      } catch {
+        return chars
+      }
+    })
 }
 
 export function matchCompiledPathRules(
@@ -71,7 +83,7 @@ export function matchCompiledPathRules(
     return { allowed: true, ruleIndex: -1 }
   }
 
-  const decoded = safeDecodePath(path)
+  const decoded = normalizePathForMatch(path)
   const matches: Array<{ rule: CompiledPathRule, index: number }> = []
 
   for (let index = 0; index < rules.length; index++) {

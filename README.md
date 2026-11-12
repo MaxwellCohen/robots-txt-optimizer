@@ -9,7 +9,7 @@ Built with [Nuxt](https://nuxt.com) and [Nuxt UI](https://ui.nuxt.com).
 - **Fetch or paste** — Load `robots.txt` from a domain (with server-side fallback when CORS blocks the browser) or paste content manually
 - **Templates** — Start from WordPress, Shopify, Next.js, Nuxt, e-commerce, staging, or "block AI training" presets
 - **Shareable URLs** — Analyze a site via `/?url=example.com`
-- **Validation** — Syntax and spec checks using [robots-linter](https://www.npmjs.com/package/robots-linter), plus crawlability warnings: blocked CSS/JS, site-wide blocks (staging files on production), and misspelled or retired crawler tokens (`anthropic-ai`, `GPT-Bot`, `Bard`, …)
+- **Validation** — Built-in RFC 9309 syntax and spec checks, plus crawlability warnings: blocked CSS/JS, site-wide blocks (staging files on production), and misspelled or retired crawler tokens (`anthropic-ai`, `GPT-Bot`, `Bard`, …)
 - **Search & AI crawlers** — Access status for search engines, AI training, AI search, and user-triggered AI fetchers, with one-click policies such as "block AI training, keep AI search"
 - **Directive summary** — Allow, disallow, and other rules grouped by user-agent
 - **Path simulation** — RFC 9309 matching (wildcards, `$` anchors, longest match wins) for any user-agent and path
@@ -22,12 +22,13 @@ Built with [Nuxt](https://nuxt.com) and [Nuxt UI](https://ui.nuxt.com).
 ## CLI
 
 ```bash
-pnpm build:cli
-node packages/cli/dist/cli.mjs check public/robots.txt --expect-allowed "Googlebot:/" --expect-blocked "GPTBot:/"
-node packages/cli/dist/cli.mjs check example.com --check-sitemaps --fail-on warning
-node packages/cli/dist/cli.mjs optimize robots.txt --write --ai block-ai-training
-node packages/cli/dist/cli.mjs compare staging.example.com example.com
+npx @maxwellcohen/robots-txt-optimizer check public/robots.txt --expect-allowed "Googlebot:/" --expect-blocked "GPTBot:/"
+npx @maxwellcohen/robots-txt-optimizer check example.com --check-sitemaps --fail-on warning
+npx @maxwellcohen/robots-txt-optimizer optimize robots.txt --write --ai block-ai-training
+npx @maxwellcohen/robots-txt-optimizer compare staging.example.com example.com
 ```
+
+From a checkout, run `pnpm build:cli` and use `node packages/cli/dist/cli.mjs` instead.
 
 Run with `--help` for all options. `check` exits with `1` when the check fails and `2` on usage or input errors. `--format json` and `--format github` (workflow annotations) are available.
 

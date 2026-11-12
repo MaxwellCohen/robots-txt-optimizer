@@ -1,6 +1,7 @@
 import { gunzipSync } from 'node:zlib'
 import { parseSitemapXml, type SitemapFetchEntry, type SitemapReport } from '../sitemap'
 import { createGuardedFetch, SERVER_USER_AGENT } from './node'
+import { readCapped } from './read-capped'
 
 export interface FetchSitemapsOptions {
   /** Maximum sitemap files to download, including indexes. */
@@ -24,34 +25,6 @@ const DEFAULTS = {
 
 function isGzip(bytes: Uint8Array): boolean {
   return bytes[0] === 0x1F && bytes[1] === 0x8B
-}
-
-async function readCapped(response: Response, maxBytes: number): Promise<Uint8Array> {
-  const reader = response.body?.getReader()
-  if (!reader) {
-    return new Uint8Array()
-  }
-  const chunks: Uint8Array[] = []
-  let total = 0
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) {
-      break
-    }
-    total += value.byteLength
-    if (total > maxBytes) {
-      await reader.cancel()
-      throw new Error(`Sitemap is larger than ${Math.round(maxBytes / 1024 / 1024)} MiB`)
-    }
-    chunks.push(value)
-  }
-  const bytes = new Uint8Array(total)
-  let offset = 0
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset)
-    offset += chunk.byteLength
-  }
-  return bytes
 }
 
 /**
@@ -98,7 +71,8 @@ export async function secureFetchSitemaps(
         continue
       }
 
-      let bytes = await readCapped(response, limits.maxBytes)
+      let bytes = await readCapped(response, limits.maxBytes,
+        () => new Error(`Sitemap is larger than ${Math.round(limits.maxBytes / 1024 / 1024)} MiB`))
       if (isGzip(bytes)) {
         bytes = gunzipSync(bytes, { maxOutputLength: limits.maxBytes })
       }

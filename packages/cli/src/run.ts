@@ -14,6 +14,7 @@ import {
 } from '@robots-txt-optimizer/core'
 import { diagnoseFetch, fetchRobotsTxt, normalizeRobotsUrl } from '@robots-txt-optimizer/core/fetch'
 import { secureFetchSitemaps } from '@robots-txt-optimizer/core/node'
+import pkg from '../package.json' with { type: 'json' }
 
 export interface CliIO {
   stdout: (text: string) => void
@@ -55,6 +56,8 @@ optimize options:
   --write                  Overwrite the input file instead of printing
   --ai <preset>            Also apply an AI crawler policy:
                            block-ai-training, block-all-ai, allow-all-ai
+
+Run with --version to print the CLI version.
 
 Exit codes: 0 success, 1 check failed, 2 usage or input error.
 `
@@ -104,6 +107,22 @@ async function loadInput(input: string, io: CliIO): Promise<LoadedInput> {
   const url = normalizeRobotsUrl(input)
   const result = await fetchRobotsTxt(url, { fetch: io.fetch, userAgent: 'robots-txt-optimizer-cli/1.0', source: 'server' })
   return { text: result.status >= 200 && result.status < 300 ? result.text : '', label: result.finalUrl, fetchStatus: result.status }
+}
+
+/**
+ * Guards commands that act on the file's content: a failed fetch must not be
+ * read as an empty (allow-all) robots.txt. A 404 genuinely means "no rules".
+ */
+function requireFetched(input: LoadedInput, io: CliIO, options: { allowMissing: boolean }): void {
+  const status = input.fetchStatus
+  if (status === undefined || (status >= 200 && status < 300)) {
+    return
+  }
+  if (status === 404 && options.allowMissing) {
+    io.stderr(`Note: ${input.label} returned HTTP 404; treating it as an empty robots.txt (everything allowed)\n`)
+    return
+  }
+  throw new UsageError(`Could not fetch ${input.label}: HTTP ${status}`)
 }
 
 function parseExpectation(value: string): { agent: string, path: string } {
@@ -334,6 +353,7 @@ export async function run(argv: string[], io: CliIO = defaultIO): Promise<number
       allowPositionals: true,
       options: {
         'help': { type: 'boolean', short: 'h' },
+        'version': { type: 'boolean', short: 'v' },
         'fail-on': { type: 'string' },
         'expect-allowed': { type: 'string', multiple: true },
         'expect-blocked': { type: 'string', multiple: true },
@@ -346,6 +366,10 @@ export async function run(argv: string[], io: CliIO = defaultIO): Promise<number
     })
 
     const [command, ...args] = positionals
+    if (values.version) {
+      io.stdout(`${pkg.version}\n`)
+      return 0
+    }
     if (values.help || !command) {
       io.stdout(HELP)
       return command || values.help ? 0 : 2
@@ -360,6 +384,7 @@ export async function run(argv: string[], io: CliIO = defaultIO): Promise<number
         }
         const input = await loadInput(args[0]!, io)
         if (command === 'check') return await runCheck(input, values, io)
+        requireFetched(input, io, { allowMissing: command === 'crawlers' })
         if (command === 'optimize') return await runOptimize(input, values, io)
         return runCrawlers(input, values, io)
       }
@@ -368,6 +393,8 @@ export async function run(argv: string[], io: CliIO = defaultIO): Promise<number
           throw new UsageError('compare takes <before> <after>')
         }
         const [before, after] = await Promise.all(args.map(arg => loadInput(arg, io)))
+        requireFetched(before!, io, { allowMissing: true })
+        requireFetched(after!, io, { allowMissing: true })
         return await runCompare(before!, after!, values, io)
       }
       default:

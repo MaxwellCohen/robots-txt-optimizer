@@ -71,11 +71,10 @@ importers:
         version: 3.3.12(typescript@6.0.3)
 
   packages/cli:
-    dependencies:
+    devDependencies:
       '@robots-txt-optimizer/core':
         specifier: workspace:*
         version: link:../core
-    devDependencies:
       '@types/node':
         specifier: ^26.6.4
         version: 26.6.4
@@ -90,10 +89,6 @@ importers:
         version: 5.0.3(@types/node@26.6.4)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0))
 
   packages/core:
-    dependencies:
-      robots-linter:
-        specifier: ^0.7.0
-        version: 0.7.0
     devDependencies:
       '@types/node':
         specifier: ^26.6.4
@@ -4953,10 +4948,6 @@ packages:
   reusify@1.1.0:
     resolution: {integrity: sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==}
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
-
-  robots-linter@0.7.0:
-    resolution: {integrity: sha512-C61u+qUvExmlvJGnkL8C63weW5UOscdZKy6hkbBIL1c1Wr/kIvuxfgUIcijqcYLy+s1/mT2HpHkjH3sSBOvpiQ==}
-    hasBin: true
 
   rolldown-string@0.3.1:
     resolution: {integrity: sha512-dv8GOXkYqUQdI0rsXB8hmzO95pKWSuX2eg5/JSJa9czfEVIFuKNR7ZJDfat8LlmD35RAhWY+evS7/wXXqFDfSg==}
@@ -11490,10 +11481,6 @@ snapshots:
   retry@0.12.0: {}
 
   reusify@1.1.0: {}
-
-  robots-linter@0.7.0:
-    dependencies:
-      commander: 11.1.0
 
   rolldown-string@0.3.1(rolldown@1.2.13):
     dependencies:

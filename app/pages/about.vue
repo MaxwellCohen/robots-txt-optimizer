@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useClipboard } from '@vueuse/core'
+
 useSeoMeta({
   title: 'About robots.txt',
   description:
@@ -16,6 +18,17 @@ User-agent: GPTBot
 Disallow: /
 
 Sitemap: https://example.com/sitemap.xml`
+
+const aiPrompt = `Optimize the robots.txt for my website using @maxwellcohen/robots-txt-optimizer.
+
+1. Run: npx @maxwellcohen/robots-txt-optimizer check <my-site-url-or-path/robots.txt> --check-sitemaps
+2. Fix every error and warning, then run: npx @maxwellcohen/robots-txt-optimizer optimize robots.txt --write
+3. Decide my AI crawler policy (block AI training but keep AI search?) and apply it with --ai block-ai-training.
+4. Verify important URLs with --expect-allowed "Googlebot:/" and sensitive ones (admin, staging, private) with --expect-blocked "Googlebot:/admin".
+5. Make sure CSS/JS and my sitemap URLs are not blocked, and that Sitemap: lines are present.
+6. Show me a diff of the final file and explain each change.`
+
+const { copy, copied } = useClipboard({ source: aiPrompt })
 
 const optimizations = [
   {
@@ -61,7 +74,7 @@ const features = [
     icon: 'i-lucide-shield-check',
     title: 'Validation',
     description:
-      'Syntax checks via robots-linter plus semantic warnings: missing colons, unknown directives, invalid sitemap URLs, and more.'
+      'RFC 9309 syntax checks plus semantic warnings: missing colons, unknown directives, invalid sitemap URLs, and more.'
   },
   {
     icon: 'i-lucide-list-tree',
@@ -274,6 +287,31 @@ const features = [
             </dl>
           </div>
         </div>
+      </div>
+    </UCard>
+
+    <UCard>
+      <div class="space-y-4">
+        <div class="flex items-center gap-2">
+          <UIcon
+            name="i-lucide-bot"
+            class="size-5 text-primary"
+          />
+          <h2 class="text-xl font-semibold">
+            Prompt for your AI assistant
+          </h2>
+        </div>
+        <p class="text-sm text-muted leading-relaxed">
+          Paste this into Claude Code, Cursor, or any coding agent to validate and optimize your website's robots.txt with the CLI.
+        </p>
+        <pre class="rounded-lg border border-default bg-elevated p-4 text-xs whitespace-pre-wrap">{{ aiPrompt }}</pre>
+        <UButton
+          :icon="copied ? 'i-lucide-check' : 'i-lucide-copy'"
+          variant="subtle"
+          @click="copy(aiPrompt)"
+        >
+          {{ copied ? 'Copied' : 'Copy prompt' }}
+        </UButton>
       </div>
     </UCard>
 

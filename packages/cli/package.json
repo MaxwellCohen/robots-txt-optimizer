@@ -1,27 +1,46 @@
 {
-  "name": "@robots-txt-optimizer/cli",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@maxwellcohen/robots-txt-optimizer",
+  "version": "0.1.0",
   "description": "Validate, test, and optimize robots.txt files from the command line or CI",
   "type": "module",
   "bin": {
     "robots-txt-optimizer": "./dist/cli.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "esbuild src/cli.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/cli.mjs --banner:js=\"#!/usr/bin/env node\" --log-level=warning",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@robots-txt-optimizer/core": "workspace:*"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build && pnpm test"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
     "esbuild": "0.28.2",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "@robots-txt-optimizer/core": "workspace:*"
+  },
+  "license": "MIT",
+  "author": "Maxwell Cohen",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MaxwellCohen/robots-txt-optimizer.git",
+    "directory": "packages/cli"
+  },
+  "keywords": [
+    "robots.txt",
+    "seo",
+    "cli",
+    "validator",
+    "optimizer"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

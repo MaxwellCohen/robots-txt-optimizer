@@ -1,423 +1,4 @@
 #!/usr/bin/env node
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __commonJS = (cb, mod) => function __require() {
-  try {
-    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-  } catch (e) {
-    throw mod = 0, e;
-  }
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-
-// ../../node_modules/.pnpm/robots-linter@0.7.0/node_modules/robots-linter/dist/token.js
-var require_token = __commonJS({
-  "../../node_modules/.pnpm/robots-linter@0.7.0/node_modules/robots-linter/dist/token.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Token = exports.EOF = exports.IDENT = exports.DIGIT = exports.CLAWLDELAY = exports.SITEMAP = exports.DISALLOW = exports.ALLOW = exports.SEPARATOR = exports.COMMENT = exports.USERAGENT = void 0;
-    exports.USERAGENT = "USERAGENT";
-    exports.COMMENT = "COMMENT";
-    exports.SEPARATOR = "SEPARATOR";
-    exports.ALLOW = "ALLOW";
-    exports.DISALLOW = "DISALLOW";
-    exports.SITEMAP = "SITEMAP";
-    exports.CLAWLDELAY = "CLAWLDELAY";
-    exports.DIGIT = "DIGIT";
-    exports.IDENT = "IDENT";
-    exports.EOF = "EOF";
-    var Token = class {
-      constructor(t, literal, line, index) {
-        this.tokenType = t;
-        this.literal = literal;
-        this.line = line;
-        this.index = index;
-      }
-    };
-    exports.Token = Token;
-  }
-});
-
-// ../../node_modules/.pnpm/robots-linter@0.7.0/node_modules/robots-linter/dist/exceptions.js
-var require_exceptions = __commonJS({
-  "../../node_modules/.pnpm/robots-linter@0.7.0/node_modules/robots-linter/dist/exceptions.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.InvalidProductToken = exports.UnexpectedToken = exports.UnexpectedCharacter = void 0;
-    var UnexpectedCharacter = class extends Error {
-      constructor(c, line, index) {
-        super(`Unexpected Character "${c}" found at line ${line}, position ${index}`);
-      }
-    };
-    exports.UnexpectedCharacter = UnexpectedCharacter;
-    var UnexpectedToken = class extends Error {
-      constructor(t, expects) {
-        super([
-          `Unexpected Token "${t.literal}" found`,
-          expects ? ` Expects ${expects}` : "",
-          ` at line ${t.line}, position ${t.index}`
-        ].join(""));
-      }
-    };
-    exports.UnexpectedToken = UnexpectedToken;
-    var InvalidProductToken = class extends Error {
-      constructor(t) {
-        super([
-          "Product token MUST only contains a-zA-Z_- characters",
-          ` at line ${t.line}, position ${t.index}`
-        ].join(""));
-      }
-    };
-    exports.InvalidProductToken = InvalidProductToken;
-  }
-});
-
-// ../../node_modules/.pnpm/robots-linter@0.7.0/node_modules/robots-linter/dist/lexer.js
-var require_lexer = __commonJS({
-  "../../node_modules/.pnpm/robots-linter@0.7.0/node_modules/robots-linter/dist/lexer.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Lexer = void 0;
-    exports.lexer = lexer;
-    var token_1 = require_token();
-    var exceptions_1 = require_exceptions();
-    function lexer(input) {
-      return new Lexer(typeof input === "string" ? new TextEncoder().encode(input) : input);
-    }
-    var Lexer = class {
-      // Constructor: initialize states
-      constructor(input) {
-        this.stack = [];
-        this.peeks = [];
-        this.isEOF = false;
-        this.current = 0;
-        this.pointer = -1;
-        this.line = 1;
-        this.index = 0;
-        this.input = input;
-        this.buffer = [];
-        this.read();
-      }
-      // read() reads next character
-      read() {
-        const c = this.input[++this.pointer];
-        if (c === void 0) {
-          this.current = 0;
-          this.index++;
-          return;
-        }
-        if (this.current === 10) {
-          this.newLine();
-        }
-        this.index++;
-        this.current = c;
-        this.buffer.push(c);
-      }
-      // read more next character
-      peek() {
-        if (this.pointer >= this.input.byteLength - 1) {
-          return 0;
-        }
-        return this.input[this.pointer + 1];
-      }
-      // reset line and index status
-      newLine() {
-        this.stack.push(String.fromCodePoint(...this.buffer));
-        this.buffer = [];
-        this.index = 0;
-        this.line++;
-      }
-      // read peek token
-      peekToken() {
-        const tok = this.nextToken();
-        this.peeks.push(tok);
-        return tok;
-      }
-      // read next token
-      nextToken() {
-        if (this.isEOF) {
-          return new token_1.Token(token_1.EOF, "", this.line, this.index);
-        }
-        if (this.peeks.length > 0) {
-          const peek = this.peeks.shift();
-          if (!peek) {
-            throw new Error("Undefined peek");
-          }
-          return peek;
-        }
-        this.skipWhitespace();
-        if (this.pointer > this.input.byteLength - 1) {
-          this.isEOF = true;
-          return new token_1.Token(token_1.EOF, "", this.line, this.index);
-        }
-        let t;
-        const line = this.line;
-        const index = this.index;
-        switch (this.current) {
-          case 58:
-            t = new token_1.Token(token_1.SEPARATOR, ":", line, index);
-            break;
-          case 35:
-            t = new token_1.Token(token_1.COMMENT, String.fromCodePoint(...this.readEOL()), line, index);
-            break;
-          default:
-            if (this.isDigit(this.current)) {
-              t = new token_1.Token(token_1.DIGIT, String.fromCodePoint(...this.readDigit()), line, index);
-            } else if (this.isCharacter(this.current)) {
-              const literal = this.readIdentifier();
-              const ident = String.fromCodePoint(...literal);
-              switch (ident.toLowerCase()) {
-                case "user-agent":
-                  t = new token_1.Token(token_1.USERAGENT, ident, line, index);
-                  break;
-                case "allow":
-                  t = new token_1.Token(token_1.ALLOW, ident, line, index);
-                  break;
-                case "disallow":
-                  t = new token_1.Token(token_1.DISALLOW, ident, line, index);
-                  break;
-                case "clawl-delay":
-                  t = new token_1.Token(token_1.CLAWLDELAY, ident, line, index);
-                  break;
-                case "sitemap":
-                  t = new token_1.Token(token_1.SITEMAP, ident, line, index);
-                  break;
-                default:
-                  t = new token_1.Token(token_1.IDENT, ident, line, index);
-                  break;
-              }
-            } else {
-              throw new exceptions_1.UnexpectedCharacter(String.fromCharCode(this.current), line, index);
-            }
-        }
-        this.read();
-        return t;
-      }
-      // Skip whitespace-related characters.
-      // Lexer skips WHITESPACE(0x20), HORIZONTAL_TAB(0x09), CARRIGE_RETURN(0x0d) and LINE_FEED(0x0a)
-      skipWhitespace() {
-        while (true) {
-          if (this.current === 32 || // WHITESPACE
-          this.current === 9 || // HORIZONTAL_TAB
-          this.current === 13 || // CARRIGE_RETURN
-          this.current === 10) {
-            this.read();
-            continue;
-          }
-          break;
-        }
-      }
-      // Check curent code point indicates character code.
-      // Lexer treats character as:
-      // 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"$%'()*+,-./:;<=>?@[\]^_`{|}~
-      isCharacter(code) {
-        return code >= 33 && code <= 126 && code !== 58 && code !== 35;
-      }
-      // Check current code point incicated digit code.
-      isDigit(code) {
-        return code >= 48 && code <= 57;
-      }
-      // Read identifiler characters
-      readIdentifier() {
-        const codes = [this.current];
-        while (true) {
-          if (!this.isCharacter(this.peek())) {
-            return codes;
-          }
-          this.read();
-          codes.push(this.current);
-        }
-      }
-      // Read decimal characters
-      readDigit() {
-        const codes = [this.current];
-        while (true) {
-          if (!this.isDigit(this.peek())) {
-            return codes;
-          }
-          this.read();
-          codes.push(this.current);
-        }
-      }
-      // Read characters until LF is found
-      readEOL() {
-        const codes = [];
-        if (this.current === 0 || this.current === 10) {
-          return codes;
-        }
-        codes.push(this.current);
-        while (true) {
-          const peek = this.peek();
-          if (peek === 0 || peek === 10) {
-            return codes;
-          }
-          this.read();
-          codes.push(this.current);
-        }
-      }
-    };
-    exports.Lexer = Lexer;
-  }
-});
-
-// ../../node_modules/.pnpm/robots-linter@0.7.0/node_modules/robots-linter/dist/parser.js
-var require_parser = __commonJS({
-  "../../node_modules/.pnpm/robots-linter@0.7.0/node_modules/robots-linter/dist/parser.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.parse = parse;
-    exports.decodePath = decodePath2;
-    var lexer_1 = require_lexer();
-    var token_1 = require_token();
-    var exceptions_1 = require_exceptions();
-    function parse(robots) {
-      const l = (0, lexer_1.lexer)(robots);
-      const result = [];
-      let token;
-      while (true) {
-        token = l.nextToken();
-        switch (token.tokenType) {
-          case token_1.USERAGENT:
-            result.push(parseGroup(l));
-            break;
-          case token_1.SITEMAP:
-            skipLine(l);
-            break;
-          case token_1.COMMENT:
-            break;
-          case token_1.EOF:
-            return result;
-          default:
-            throw new exceptions_1.UnexpectedToken(token);
-        }
-      }
-    }
-    function skipLine(l) {
-      let token = nextTokenIs(l, token_1.SEPARATOR);
-      while (true) {
-        token = l.peekToken();
-        if (token.tokenType === token_1.EOF) {
-          return;
-        }
-        if (token.tokenType !== token_1.IDENT && token.tokenType !== token_1.SEPARATOR && token.tokenType !== token_1.COMMENT && token.tokenType !== token_1.DIGIT) {
-          return;
-        }
-        l.nextToken();
-      }
-    }
-    function parseGroup(l) {
-      const rule = {
-        userAgent: "",
-        rules: []
-      };
-      let token = nextTokenIs(l, token_1.SEPARATOR);
-      token = nextTokenIs(l, token_1.IDENT);
-      if (token.literal !== "*" && !/^[0-9a-zA-Z_-]+$/.test(token.literal)) {
-        throw new exceptions_1.InvalidProductToken(token);
-      }
-      rule.userAgent = token.literal;
-      while (true) {
-        token = l.peekToken();
-        if (token.tokenType === token_1.EOF || token.tokenType === token_1.USERAGENT || token.tokenType === token_1.SITEMAP) {
-          break;
-        }
-        token = l.nextToken();
-        switch (token.tokenType) {
-          case token_1.COMMENT:
-            break;
-          case token_1.CLAWLDELAY:
-            nextTokenIs(l, token_1.SEPARATOR);
-            nextTokenIs(l, token_1.DIGIT);
-            break;
-          case token_1.ALLOW:
-            rule.rules.push({ type: "ALLOW", path: parseRule(l) });
-            break;
-          case token_1.DISALLOW:
-            rule.rules.push({ type: "DISALLOW", path: parseRule(l) });
-            break;
-          default:
-            throw new exceptions_1.UnexpectedToken(token);
-        }
-      }
-      return rule;
-    }
-    function parseRule(l) {
-      let token = nextTokenIs(l, token_1.SEPARATOR);
-      const patterns = [];
-      while (true) {
-        token = l.peekToken();
-        if (token.tokenType !== token_1.IDENT && token.tokenType !== token_1.SEPARATOR && token.tokenType !== token_1.COMMENT) {
-          break;
-        }
-        token = l.nextToken();
-        if (token.tokenType !== token_1.COMMENT) {
-          patterns.push(decodePath2(token.literal));
-        }
-      }
-      return patterns.join("");
-    }
-    function nextTokenIs(l, expect) {
-      const token = l.nextToken();
-      if (token.tokenType !== expect) {
-        throw new exceptions_1.UnexpectedToken(token, expect);
-      }
-      return token;
-    }
-    function decodePath2(literal) {
-      return decodeURIComponent(literal.replace(/[uU]\+([a-zA-Z0-9]{6})/g, (_, m) => {
-        return [
-          `%${m.slice(0, 2)}`,
-          `%${m.slice(2, 4)}`,
-          `%${m.slice(4, 6)}`
-        ].join("");
-      }));
-    }
-  }
-});
-
-// ../../node_modules/.pnpm/robots-linter@0.7.0/node_modules/robots-linter/dist/index.js
-var require_dist = __commonJS({
-  "../../node_modules/.pnpm/robots-linter@0.7.0/node_modules/robots-linter/dist/index.js"(exports) {
-    "use strict";
-    var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __exportStar = exports && exports.__exportStar || function(m, exports2) {
-      for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports2, p)) __createBinding(exports2, m, p);
-    };
-    Object.defineProperty(exports, "__esModule", { value: true });
-    __exportStar(require_parser(), exports);
-  }
-});
 
 // src/run.ts
 import { readFile, writeFile } from "node:fs/promises";
@@ -542,21 +123,10 @@ function parseRobotsTxt(text) {
   };
 }
 
-// ../core/src/validate.ts
-var import_robots_linter2 = __toESM(require_dist(), 1);
-
 // ../core/src/robots-text.ts
 var USER_AGENT_SEPARATOR_PATTERN = /[\s\u00a0\u2011\u2010\u2012\u2013\u2014-]+/g;
 function normalizeDirectiveName2(name) {
   return name.toLowerCase().replace(/[\s_-]+/g, "");
-}
-function normalizeUserAgentForLinter(value) {
-  const trimmed = value.trim();
-  if (trimmed === "*") {
-    return "*";
-  }
-  const rewritten = trimmed.replace(USER_AGENT_SEPARATOR_PATTERN, "_").replace(/[^0-9a-zA-Z_]/g, "");
-  return rewritten || "agent";
 }
 function normalizeUserAgentForMatch(value) {
   const trimmed = value.trim().toLowerCase();
@@ -564,45 +134,6 @@ function normalizeUserAgentForMatch(value) {
     return "*";
   }
   return trimmed.replace(USER_AGENT_SEPARATOR_PATTERN, "_").replace(/[^0-9a-z0-9_]/g, "");
-}
-function rewriteUserAgentLine(line) {
-  const commentIndex = line.indexOf("#");
-  const comment = commentIndex === -1 ? "" : line.slice(commentIndex);
-  const withoutComment = commentIndex === -1 ? line : line.slice(0, commentIndex);
-  const content = withoutComment.trim();
-  const colonIndex = content.indexOf(":");
-  if (colonIndex === -1) {
-    return line;
-  }
-  const name = content.slice(0, colonIndex).trim();
-  const value = content.slice(colonIndex + 1).trim();
-  const leading = withoutComment.slice(0, withoutComment.indexOf(content));
-  const rewritten = normalizeUserAgentForLinter(value);
-  if (!comment) {
-    return `${leading}${name}: ${rewritten}`;
-  }
-  return `${leading}${name}: ${rewritten}  ${comment.trim()}`;
-}
-function textForLint(doc) {
-  const lintableDirectives = /* @__PURE__ */ new Set(["useragent", "allow", "disallow", "sitemap"]);
-  return doc.lines.map((line) => {
-    const content = stripComment(line);
-    if (!content) {
-      return line;
-    }
-    const colonIndex = content.indexOf(":");
-    if (colonIndex === -1) {
-      return line;
-    }
-    const normalized = normalizeDirectiveName2(content.slice(0, colonIndex).trim());
-    if (normalized === "useragent") {
-      return rewriteUserAgentLine(line);
-    }
-    if (lintableDirectives.has(normalized)) {
-      return line;
-    }
-    return `# ${line}`;
-  }).join("\n");
 }
 function userAgentMatches(ruleAgent, requestAgent) {
   const rule = normalizeUserAgentForMatch(ruleAgent);
@@ -614,7 +145,6 @@ function userAgentMatches(ruleAgent, requestAgent) {
 }
 
 // ../core/src/match.ts
-var import_robots_linter = __toESM(require_dist(), 1);
 var DEFAULT_MATCH = {
   allowed: true,
   matchedPattern: "(default allow)",
@@ -634,25 +164,30 @@ function isStarUserAgent(agent) {
   return normalizeUserAgentForMatch(agent) === "*";
 }
 function compilePathRule(type, path) {
-  const decoded = safeDecodePath(path);
+  const normalized = normalizePathForMatch(path);
   return {
     type: type === "allow" ? "ALLOW" : "DISALLOW",
-    path: decoded,
-    regex: toRegExpPath(decoded)
+    path: normalized,
+    regex: toRegExpPath(normalized)
   };
 }
-function safeDecodePath(path) {
-  try {
-    return (0, import_robots_linter.decodePath)(path);
-  } catch {
-    return path;
-  }
+function normalizePathForMatch(path) {
+  return path.replace(/%([0-9a-fA-F]{2})/g, (_, hex) => {
+    const char = String.fromCharCode(Number.parseInt(hex, 16));
+    return /[A-Za-z0-9\-._~]/.test(char) ? char : `%${hex.toUpperCase()}`;
+  }).replace(/[\u0080-\uffff]+/g, (chars) => {
+    try {
+      return encodeURIComponent(chars);
+    } catch {
+      return chars;
+    }
+  });
 }
 function matchCompiledPathRules(path, rules, exclude = -1) {
   if (path === "/robots.txt") {
     return { allowed: true, ruleIndex: -1 };
   }
-  const decoded = safeDecodePath(path);
+  const decoded = normalizePathForMatch(path);
   const matches = [];
   for (let index = 0; index < rules.length; index++) {
     if (typeof exclude === "number" ? index === exclude : exclude.has(index)) {
@@ -689,6 +224,9 @@ function groupMatchesUserAgent(groupAgents, userAgent, mode) {
     (agent) => !isStarUserAgent(agent) && userAgentMatches(agent, userAgent)
   );
 }
+function isPolicyToken(userAgent) {
+  return normalizeUserAgentForMatch(userAgent) === normalizeUserAgentForMatch("__usage_ai-training");
+}
 function findApplicableGroups(doc, userAgent) {
   const groups = doc.groups.map((group) => ({
     group,
@@ -697,7 +235,7 @@ function findApplicableGroups(doc, userAgent) {
   const specificGroups = groups.filter(
     ({ agents }) => groupMatchesUserAgent(agents, userAgent, "specific")
   );
-  const applicable = specificGroups.length > 0 ? specificGroups : groups.filter(({ agents }) => groupMatchesUserAgent(agents, userAgent, "star"));
+  const applicable = specificGroups.length > 0 ? specificGroups : isPolicyToken(userAgent) ? [] : groups.filter(({ agents }) => groupMatchesUserAgent(agents, userAgent, "star"));
   return applicable.map(({ group }) => group);
 }
 function checkRobotsPath(robotsTxt, userAgent, path, doc = parseRobotsTxt(robotsTxt)) {
@@ -727,6 +265,7 @@ var CRAWLER_CATEGORY_LABELS = {
   "ai-search": "AI search",
   "ai-user": "AI user-triggered fetches"
 };
+var AI_TRAINING_POLICY_TOKEN = "__usage_ai-training";
 var KNOWN_CRAWLERS = [
   { token: "Googlebot", operator: "Google", category: "search", description: "Google Search crawler" },
   { token: "Bingbot", operator: "Microsoft", category: "search", description: "Bing Search crawler (also powers Copilot answers)" },
@@ -736,6 +275,7 @@ var KNOWN_CRAWLERS = [
   { token: "Baiduspider", operator: "Baidu", category: "search", description: "Baidu search crawler" },
   { token: "GPTBot", operator: "OpenAI", category: "ai-training", description: "Collects content to train OpenAI models" },
   { token: "ClaudeBot", operator: "Anthropic", category: "ai-training", description: "Collects content to train Anthropic models" },
+  { token: AI_TRAINING_POLICY_TOKEN, operator: "Shared (IETF AIPREF)", category: "ai-training", description: "Provider-neutral AI training preference signal (draft-kelley-aipref-training-preference-signal); `User-agent: *` groups do not apply to it", controlToken: true },
   { token: "Google-Extended", operator: "Google", category: "ai-training", description: "Controls use of Googlebot-crawled content for Gemini training and grounding; does not affect Google Search", controlToken: true },
   { token: "Applebot-Extended", operator: "Apple", category: "ai-training", description: "Controls use of Applebot-crawled content for Apple AI training", controlToken: true },
   { token: "CCBot", operator: "Common Crawl", category: "ai-training", description: "Open web crawl widely used as AI training data" },
@@ -1037,29 +577,55 @@ function collectCrawlabilityIssues(doc) {
 // ../core/src/validate.ts
 var NON_RFC_DIRECTIVES = /* @__PURE__ */ new Set(["crawldelay", "host", "contentsignal"]);
 var MAX_LINE_LENGTH = 4096;
-function isUnexpectedCharacterError(message) {
-  return message.includes("Unexpected Character");
-}
-function isInvalidProductTokenError(message) {
-  return message.includes("Product token MUST only contains");
-}
-function isUnexpectedTokenError(message) {
-  return message.includes("Unexpected Token");
-}
-function issueFromParseError(err, doc) {
-  if (!(err instanceof Error)) {
-    return null;
+var PRODUCT_TOKEN = /^[0-9a-zA-Z_-]+$/;
+function collectSyntaxIssues(doc) {
+  const issues = [];
+  let seenUserAgent = false;
+  for (let i = 0; i < doc.lines.length; i++) {
+    const lineNum = i + 1;
+    const raw = doc.lines[i];
+    const content = stripComment(raw);
+    if (!content) {
+      continue;
+    }
+    if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(content)) {
+      issues.push({ severity: "error", message: "Unexpected control character", line: lineNum });
+      continue;
+    }
+    const colonIndex = content.indexOf(":");
+    if (colonIndex === -1) {
+      continue;
+    }
+    const normalized = normalizeDirectiveName2(content.slice(0, colonIndex));
+    const value = content.slice(colonIndex + 1).trim();
+    if (normalized === "useragent") {
+      seenUserAgent = true;
+      if (value !== "*" && value && !PRODUCT_TOKEN.test(value)) {
+        issues.push({
+          severity: "warning",
+          message: 'Product token should only contain letters, digits, "_" and "-"',
+          line: lineNum
+        });
+      }
+    } else if (normalized === "allow" || normalized === "disallow") {
+      const bad = [...value].find((ch) => ch.charCodeAt(0) > 126);
+      if (bad) {
+        issues.push({
+          severity: "warning",
+          message: `Non-ASCII character "${bad}" in path (valid UTF-8 per RFC 9309; percent-encode it for older crawlers)`,
+          line: lineNum
+        });
+      }
+    }
+    if ((normalized === "allow" || normalized === "disallow") && !seenUserAgent) {
+      issues.push({
+        severity: "error",
+        message: `${normalized === "allow" ? "Allow" : "Disallow"} rule must follow a User-agent line`,
+        line: lineNum
+      });
+    }
   }
-  const lineMatch = err.message.match(/line[:\s]+(\d+)/i) ?? err.message.match(/at line (\d+)/i);
-  const line = lineMatch ? Number(lineMatch[1]) : void 0;
-  if (line !== void 0 && (isUnexpectedCharacterError(err.message) || isInvalidProductTokenError(err.message) || isUnexpectedTokenError(err.message)) && isUserAgentLineContent(doc.lines[line - 1] ?? "")) {
-    return null;
-  }
-  return {
-    severity: "error",
-    message: err.message,
-    line
-  };
+  return issues;
 }
 function directiveNameAtLine(doc, lineNum) {
   const raw = doc.lines[lineNum - 1];
@@ -1210,19 +776,7 @@ function dedupeIssues(issues) {
 }
 function validateRobotsDocument(doc) {
   const issues = [];
-  try {
-    (0, import_robots_linter2.parse)(textForLint(doc));
-  } catch (err) {
-    const issue = issueFromParseError(err, doc);
-    if (issue) {
-      issues.push(issue);
-    } else if (!(err instanceof Error)) {
-      issues.push({
-        severity: "error",
-        message: "Failed to parse robots.txt"
-      });
-    }
-  }
+  issues.push(...collectSyntaxIssues(doc));
   issues.push(...collectDirectiveWarnings(doc));
   issues.push(...collectSemanticIssues(doc));
   issues.push(...collectCrawlabilityIssues(doc));
@@ -2045,6 +1599,35 @@ var RobotsFetchError = class extends Error {
   }
 };
 
+// ../core/src/fetch/read-capped.ts
+async function readCapped(response, maxBytes, tooLarge) {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return new Uint8Array();
+  }
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
 // ../core/src/fetch/fetch-robots.ts
 var DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
 var DEFAULT_TIMEOUT_MS = 1e4;
@@ -2066,17 +1649,15 @@ async function fetchRobotsTxt(url, options = {}) {
       },
       redirect: "follow"
     });
+    const tooLarge = () => new RobotsFetchError("robots.txt response is too large", "TOO_LARGE");
     const contentLength = Number(response.headers.get("content-length") || 0);
     if (contentLength > maxBytes) {
-      throw new RobotsFetchError("robots.txt response is too large", "TOO_LARGE");
+      await response.body?.cancel();
+      throw tooLarge();
     }
-    const buffer = await response.arrayBuffer();
-    if (buffer.byteLength > maxBytes) {
-      throw new RobotsFetchError("robots.txt response is too large", "TOO_LARGE");
-    }
-    const bytes = new Uint8Array(buffer);
+    const bytes = await readCapped(response, maxBytes, tooLarge);
     const hasBom = bytes[0] === 239 && bytes[1] === 187 && bytes[2] === 191;
-    const text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
+    const text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
     const finalUrl = response.url || url.toString();
     return {
       text,
@@ -2085,7 +1666,7 @@ async function fetchRobotsTxt(url, options = {}) {
       contentType: response.headers.get("content-type"),
       source,
       redirected: response.redirected || finalUrl !== url.toString(),
-      bytes: buffer.byteLength,
+      bytes: bytes.byteLength,
       hasBom
     };
   } catch (err) {
@@ -2232,7 +1813,7 @@ function diagnoseFetch(result, requestedUrl) {
 }
 
 // ../core/src/fetch/node.ts
-import { isIP } from "node:net";
+import { BlockList, isIP } from "node:net";
 import { lookup } from "node:dns/promises";
 
 // ../core/src/fetch/sitemap-node.ts
@@ -2245,33 +1826,6 @@ var DEFAULTS = {
 };
 function isGzip(bytes) {
   return bytes[0] === 31 && bytes[1] === 139;
-}
-async function readCapped(response, maxBytes) {
-  const reader = response.body?.getReader();
-  if (!reader) {
-    return new Uint8Array();
-  }
-  const chunks = [];
-  let total = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
-    total += value.byteLength;
-    if (total > maxBytes) {
-      await reader.cancel();
-      throw new Error(`Sitemap is larger than ${Math.round(maxBytes / 1024 / 1024)} MiB`);
-    }
-    chunks.push(value);
-  }
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return bytes;
 }
 async function secureFetchSitemaps(sitemapUrls, options = {}) {
   const limits = { ...DEFAULTS, ...options };
@@ -2304,7 +1858,11 @@ async function secureFetchSitemaps(sitemapUrls, options = {}) {
         entry.error = `HTTP ${response.status}`;
         continue;
       }
-      let bytes = await readCapped(response, limits.maxBytes);
+      let bytes = await readCapped(
+        response,
+        limits.maxBytes,
+        () => new Error(`Sitemap is larger than ${Math.round(limits.maxBytes / 1024 / 1024)} MiB`)
+      );
       if (isGzip(bytes)) {
         bytes = gunzipSync(bytes, { maxOutputLength: limits.maxBytes });
       }
@@ -2336,36 +1894,65 @@ async function secureFetchSitemaps(sitemapUrls, options = {}) {
 }
 
 // ../core/src/fetch/node.ts
+var BLOCKED = new BlockList();
+for (const [network, prefix] of [
+  ["0.0.0.0", 8],
+  // "this" network
+  ["10.0.0.0", 8],
+  ["100.64.0.0", 10],
+  // carrier-grade NAT
+  ["127.0.0.0", 8],
+  ["169.254.0.0", 16],
+  // link-local, cloud metadata
+  ["172.16.0.0", 12],
+  ["192.0.0.0", 24],
+  ["192.168.0.0", 16],
+  ["198.18.0.0", 15],
+  // benchmarking
+  ["224.0.0.0", 3]
+  // multicast + reserved
+]) {
+  BLOCKED.addSubnet(network, prefix, "ipv4");
+}
+for (const [network, prefix] of [
+  ["::", 128],
+  ["::1", 128],
+  ["64:ff9b::", 96],
+  // NAT64
+  ["2002::", 16],
+  // 6to4
+  ["fc00::", 7],
+  // unique local
+  ["fe80::", 10],
+  // link-local
+  ["ff00::", 8]
+  // multicast
+]) {
+  BLOCKED.addSubnet(network, prefix, "ipv6");
+}
+var IPV4_MAPPED = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i;
 function isPrivateIp(ip) {
-  if (ip === "::1" || ip === "127.0.0.1" || ip === "0.0.0.0") {
+  const family = isIP(ip);
+  if (family === 4) {
+    return BLOCKED.check(ip, "ipv4");
+  }
+  if (family !== 6) {
     return true;
   }
-  if (isIP(ip) === 6) {
-    const normalized = ip.toLowerCase();
-    if (normalized.startsWith("fc") || normalized.startsWith("fd")) {
-      return true;
-    }
-    if (normalized.startsWith("fe80")) {
-      return true;
-    }
-    return false;
+  const dotted = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (dotted) {
+    return BLOCKED.check(dotted[1], "ipv4");
   }
-  const parts = ip.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) {
-    return true;
+  const hex = ip.match(IPV4_MAPPED);
+  if (hex) {
+    const high = Number.parseInt(hex[1], 16);
+    const low = Number.parseInt(hex[2], 16);
+    return BLOCKED.check(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`, "ipv4");
   }
-  const a = parts[0];
-  const b = parts[1];
-  if (a === 10) return true;
-  if (a === 127) return true;
-  if (a === 0) return true;
-  if (a === 169 && b === 254) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 192 && b === 168) return true;
-  return false;
+  return BLOCKED.check(ip, "ipv6");
 }
 async function assertPublicHost(url) {
-  const hostname = url.hostname.toLowerCase();
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".local")) {
     throw new RobotsFetchSecurityError(
       "Requests to local hosts are not allowed",
@@ -2418,6 +2005,54 @@ function createGuardedFetch(baseFetch = globalThis.fetch) {
 }
 var SERVER_USER_AGENT = "robots-txt-optimizer/1.0";
 
+// package.json
+var package_default = {
+  name: "@maxwellcohen/robots-txt-optimizer",
+  version: "0.1.0",
+  description: "Validate, test, and optimize robots.txt files from the command line or CI",
+  type: "module",
+  bin: {
+    "robots-txt-optimizer": "./dist/cli.mjs"
+  },
+  files: [
+    "dist",
+    "README.md"
+  ],
+  scripts: {
+    build: 'esbuild src/cli.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/cli.mjs --banner:js="#!/usr/bin/env node" --log-level=warning',
+    test: "vitest run",
+    typecheck: "tsc --noEmit",
+    prepublishOnly: "pnpm build && pnpm test"
+  },
+  devDependencies: {
+    "@types/node": "^26.6.4",
+    esbuild: "0.28.2",
+    typescript: "^6.0.3",
+    vitest: "^5.0.3",
+    "@robots-txt-optimizer/core": "workspace:*"
+  },
+  license: "MIT",
+  author: "Maxwell Cohen",
+  repository: {
+    type: "git",
+    url: "git+https://github.com/MaxwellCohen/robots-txt-optimizer.git",
+    directory: "packages/cli"
+  },
+  keywords: [
+    "robots.txt",
+    "seo",
+    "cli",
+    "validator",
+    "optimizer"
+  ],
+  engines: {
+    node: ">=20"
+  },
+  publishConfig: {
+    access: "public"
+  }
+};
+
 // src/run.ts
 var defaultIO = {
   stdout: (text) => process.stdout.write(text),
@@ -2450,6 +2085,8 @@ optimize options:
   --write                  Overwrite the input file instead of printing
   --ai <preset>            Also apply an AI crawler policy:
                            block-ai-training, block-all-ai, allow-all-ai
+
+Run with --version to print the CLI version.
 
 Exit codes: 0 success, 1 check failed, 2 usage or input error.
 `;
@@ -2484,6 +2121,18 @@ async function loadInput(input, io) {
   const url = normalizeRobotsUrl(input);
   const result = await fetchRobotsTxt(url, { fetch: io.fetch, userAgent: "robots-txt-optimizer-cli/1.0", source: "server" });
   return { text: result.status >= 200 && result.status < 300 ? result.text : "", label: result.finalUrl, fetchStatus: result.status };
+}
+function requireFetched(input, io, options) {
+  const status = input.fetchStatus;
+  if (status === void 0 || status >= 200 && status < 300) {
+    return;
+  }
+  if (status === 404 && options.allowMissing) {
+    io.stderr(`Note: ${input.label} returned HTTP 404; treating it as an empty robots.txt (everything allowed)
+`);
+    return;
+  }
+  throw new UsageError(`Could not fetch ${input.label}: HTTP ${status}`);
 }
 function parseExpectation(value) {
   const index = value.indexOf(":");
@@ -2700,6 +2349,7 @@ async function run(argv, io = defaultIO) {
       allowPositionals: true,
       options: {
         "help": { type: "boolean", short: "h" },
+        "version": { type: "boolean", short: "v" },
         "fail-on": { type: "string" },
         "expect-allowed": { type: "string", multiple: true },
         "expect-blocked": { type: "string", multiple: true },
@@ -2711,6 +2361,11 @@ async function run(argv, io = defaultIO) {
       }
     });
     const [command, ...args] = positionals;
+    if (values.version) {
+      io.stdout(`${package_default.version}
+`);
+      return 0;
+    }
     if (values.help || !command) {
       io.stdout(HELP);
       return command || values.help ? 0 : 2;
@@ -2724,6 +2379,7 @@ async function run(argv, io = defaultIO) {
         }
         const input = await loadInput(args[0], io);
         if (command === "check") return await runCheck(input, values, io);
+        requireFetched(input, io, { allowMissing: command === "crawlers" });
         if (command === "optimize") return await runOptimize(input, values, io);
         return runCrawlers(input, values, io);
       }
@@ -2732,6 +2388,8 @@ async function run(argv, io = defaultIO) {
           throw new UsageError("compare takes <before> <after>");
         }
         const [before, after] = await Promise.all(args.map((arg) => loadInput(arg, io)));
+        requireFetched(before, io, { allowMissing: true });
+        requireFetched(after, io, { allowMissing: true });
         return await runCompare(before, after, values, io);
       }
       default:

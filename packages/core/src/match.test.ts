@@ -64,4 +64,24 @@ describe('checkRobotsPath group handling', () => {
     const result = checkRobotsPath('User-agent: *\nDisallow: /\nAllow: /blog', 'Googlebot', '/blog/x')
     expect(result).toMatchObject({ allowed: true, matchedPattern: '/blog', matchingLine: 3 })
   })
+
+  it('keeps percent-encoded wildcards, anchors and slashes literal', () => {
+    const robots = 'User-agent: *\nDisallow: /a%2Ab\nDisallow: /c%24\nDisallow: /d%2fe'
+    expect(allowed(robots, '/aXb')).toBe(true)
+    expect(allowed(robots, '/a%2ab')).toBe(false)
+    expect(allowed(robots, '/c%24/more')).toBe(false)
+    expect(allowed(robots, '/d/e')).toBe(true)
+    expect(allowed(robots, '/d%2Fe')).toBe(false)
+  })
+
+  it('matches non-ASCII and unreserved characters against their percent-encoded form', () => {
+    expect(allowed('User-agent: *\nDisallow: /caf%c3%a9', '/café')).toBe(false)
+    expect(allowed('User-agent: *\nDisallow: /café', '/caf%C3%A9')).toBe(false)
+    expect(allowed('User-agent: *\nDisallow: /%7Euser', '/~user')).toBe(false)
+  })
+
+  it('does not rewrite literal u+XXXXXX sequences', () => {
+    expect(allowed('User-agent: *\nDisallow: /u+414243', '/ABC')).toBe(true)
+    expect(allowed('User-agent: *\nDisallow: /u+414243', '/u+414243')).toBe(false)
+  })
 })

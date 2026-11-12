@@ -1,45 +1,64 @@
-import { isIP } from 'node:net'
+import { BlockList, isIP } from 'node:net'
 import { lookup } from 'node:dns/promises'
 import { RobotsFetchError, RobotsFetchSecurityError } from './errors'
 import { fetchRobotsTxt } from './fetch-robots'
 import { normalizeRobotsUrl } from './normalize-url'
 import type { FetchResult } from '../types'
 
-function isPrivateIp(ip: string): boolean {
-  if (ip === '::1' || ip === '127.0.0.1' || ip === '0.0.0.0') {
+const BLOCKED = new BlockList()
+for (const [network, prefix] of [
+  ['0.0.0.0', 8], // "this" network
+  ['10.0.0.0', 8],
+  ['100.64.0.0', 10], // carrier-grade NAT
+  ['127.0.0.0', 8],
+  ['169.254.0.0', 16], // link-local, cloud metadata
+  ['172.16.0.0', 12],
+  ['192.0.0.0', 24],
+  ['192.168.0.0', 16],
+  ['198.18.0.0', 15], // benchmarking
+  ['224.0.0.0', 3] // multicast + reserved
+] as const) {
+  BLOCKED.addSubnet(network, prefix, 'ipv4')
+}
+for (const [network, prefix] of [
+  ['::', 128],
+  ['::1', 128],
+  ['64:ff9b::', 96], // NAT64
+  ['2002::', 16], // 6to4
+  ['fc00::', 7], // unique local
+  ['fe80::', 10], // link-local
+  ['ff00::', 8] // multicast
+] as const) {
+  BLOCKED.addSubnet(network, prefix, 'ipv6')
+}
+
+const IPV4_MAPPED = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i
+
+export function isPrivateIp(ip: string): boolean {
+  const family = isIP(ip)
+  if (family === 4) {
+    return BLOCKED.check(ip, 'ipv4')
+  }
+  if (family !== 6) {
     return true
   }
-
-  if (isIP(ip) === 6) {
-    const normalized = ip.toLowerCase()
-    if (normalized.startsWith('fc') || normalized.startsWith('fd')) {
-      return true
-    }
-    if (normalized.startsWith('fe80')) {
-      return true
-    }
-    return false
+  // IPv4-mapped IPv6 (::ffff:a.b.c.d or ::ffff:hhhh:hhhh) is judged as IPv4.
+  const dotted = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i)
+  if (dotted) {
+    return BLOCKED.check(dotted[1]!, 'ipv4')
   }
-
-  const parts = ip.split('.').map(Number)
-  if (parts.length !== 4 || parts.some(n => Number.isNaN(n))) {
-    return true
+  const hex = ip.match(IPV4_MAPPED)
+  if (hex) {
+    const high = Number.parseInt(hex[1]!, 16)
+    const low = Number.parseInt(hex[2]!, 16)
+    return BLOCKED.check(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`, 'ipv4')
   }
-
-  const a = parts[0]!
-  const b = parts[1]!
-  if (a === 10) return true
-  if (a === 127) return true
-  if (a === 0) return true
-  if (a === 169 && b === 254) return true
-  if (a === 172 && b >= 16 && b <= 31) return true
-  if (a === 192 && b === 168) return true
-
-  return false
+  return BLOCKED.check(ip, 'ipv6')
 }
 
 export async function assertPublicHost(url: URL): Promise<void> {
-  const hostname = url.hostname.toLowerCase()
+  // URL.hostname keeps the brackets around IPv6 literals.
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, '')
 
   if (
     hostname === 'localhost'
