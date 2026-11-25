@@ -30,10 +30,18 @@ inputs:
 runs:
   using: composite
   steps:
+    # pnpm/action-setup resolves package_json_file against GITHUB_WORKSPACE, so it
+    # needs a workspace-relative path; an absolute action path is silently not found.
+    - name: Locate action package.json
+      id: manifest
+      shell: bash
+      run: |
+        echo "path=$(node -p "require('node:path').relative(process.env.GITHUB_WORKSPACE, require('node:path').join(process.env.GITHUB_ACTION_PATH, 'package.json'))")" >> "$GITHUB_OUTPUT"
+
     - name: Install pnpm
       uses: pnpm/action-setup@v6
       with:
-        package_json_file: ${{ github.action_path }}/package.json
+        package_json_file: ${{ steps.manifest.outputs.path }}
 
     - name: Set up Node
       uses: actions/setup-node@v6
